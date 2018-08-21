@@ -1,0 +1,42 @@
+author: Myles McNamara <myles@smyl.es>
+type: lib
+description: Captive portal to configure and setup WiFi connection
+version: 1.0
+# platforms: [ cc3200, cc3220, esp32, esp8266 ]
+
+sources:
+  - src
+
+filesystem:
+  - fs
+
+includes:
+  - include
+
+config_schema:
+  - [ "portal", "o", {title: "Captive Portal configurations"}]
+  - [ "portal.wifi", "o", {title: "WiFi Captive Portal configurations"}]
+  - [ "portal.wifi.enable", "b", false, {title: "Enable WiFi captive portal on device boot"}]
+  - [ "portal.wifi.gzip", "b", true, {title: "Use and serve gzipped assets (set this to false to serve portal files with .gz -- for dev work)"}]
+  - [ "portal.wifi.hostname", "s", {title: "Redirect hostname or IP (do not include http:// OR trailing slash) - if not set, AP IP will be used"}]
+  - [ "portal.wifi.endpoint", "s", "/wifi", {title: "Endpoint to use for serving WiFi portal ( to set as root directory use backslash / )"}]
+
+libs:
+  - origin: https://github.com/mongoose-os-libs/wifi
+  - origin: https://github.com/mongoose-os-libs/rpc-service-wifi
+  - origin: https://github.com/mongoose-os-libs/rpc-common
+
+tags:
+  - c
+  - wifi
+  - setup
+  - js
+
+cdefs:
+  MGOS_ENABLE_WIFI_SETUP_CHECK: 0
+  MG_ENABLE_HTTP_URL_REWRITES: 1
+
+init_after:
+  - wifi
+
+manifest_version: 2017-09-29

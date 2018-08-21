@@ -1,0 +1,120 @@
+body {
+    font: 1.0em Lato, "Helvetica Neue", Arial, Helvetica, sans-serif;
+  }
+  
+  #header {
+    box-sizing: border-box;
+    color: rgba(0, 0, 0, 0.87);
+    height: auto;
+    font-size: 2em;
+    text-align: center;
+    width: 100%;
+    border-bottom: 1px solid rgba(34, 36, 38, 0.15);
+    padding: 0px 0px 3px;
+  }
+  
+  .message {
+    bottom: 0px;
+    box-sizing: border-box;
+    height: auto;
+    left: 0px;
+    min-height: 14px;
+    position: relative;
+    right: 0px;
+    width: 100%;
+    border-radius: 4px 4px 4px 4px;
+    margin: 14px 0px;
+    padding: 14px 21px;
+    display: none;
+  }
+  
+  #info {
+    color: rgb(33, 133, 208);
+    box-shadow: rgba(34, 36, 38, 0.22) 0px 0px 0px 1px inset, rgba(0, 0, 0, 0) 0px 0px 0px 0px;
+    background: rgb(223, 240, 255) none repeat scroll 0% 0% / auto padding-box border-box;
+    border: 1px none rgb(33, 133, 208);
+  }
+  
+  #error {
+    color: rgb(212, 22, 22);
+    box-shadow: rgba(34, 36, 38, 0.22) 0px 0px 0px 1px inset, rgba(0, 0, 0, 0) 0px 0px 0px 0px;
+    background: rgb(255, 223, 231) none repeat scroll 0% 0% / auto padding-box border-box;
+    border: 1px none rgb(212, 22, 22);
+  }
+  
+  #netlabel,
+  #passlabel {
+    box-sizing: border-box;
+    color: rgba(0, 0, 0, 0.87);
+    display: block;
+    margin-top: 10px;
+    margin-bottom: 5px;
+  }
+  
+  #networks {
+    bottom: 0px;
+    box-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px inset;
+    color: rgba(0, 0, 0, 0.87);
+    cursor: pointer;
+    display: block;
+    height: 38px;
+    left: 0px;
+    min-height: 15px;
+    position: relative;
+    right: 0px;
+    text-align: left;
+    top: 0px;
+    width: 100%;
+    border: 1px solid rgba(34, 36, 38, 0.15);
+    border-radius: 5px 5px 5px 5px;
+    font-size: 1.0em;
+  }
+  
+  #passwrap {
+    margin-bottom: 0.7em;
+  }
+  
+  #password {
+    box-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px inset;
+    cursor: auto;
+    vertical-align: top;
+    width: 100%;
+    border: 1px solid rgba(34, 36, 38, 0.15);
+    border-radius: 4px 4px 4px 4px;
+    padding: 8px 8px;
+    font-size: 1em;
+  }
+  
+  #rescan {
+    box-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 1px inset,
+      rgba(34, 36, 38, 0.15) 0px 0px 0px 0px inset;
+    box-sizing: border-box;
+    color: rgba(0, 0, 0, 0.6);
+    display: inline-block;
+    height: 3em;
+    text-align: center;
+    width: 100%;
+    background: rgb(224, 225, 226) none repeat scroll 0% 0% / auto padding-box border-box;
+    border: 0px none rgba(0, 0, 0, 0.6);
+    border-radius: 4px 4px 4px 4px;
+    font: normal normal 700 normal 14px / 14px Lato, "Helvetica Neue", Arial, Helvetica, sans-serif;
+    margin-bottom: 0.8em;
+    cursor: pointer;
+    padding-top: 1.1em;
+  }
+  
+  #save {
+    box-shadow: rgba(34, 36, 38, 0.15) 0px 0px 0px 0px inset;
+    box-sizing: border-box;
+    color: rgb(255, 255, 255);
+    cursor: pointer;
+    display: inline-block;
+    height: 4em;
+    text-align: center;
+    width: 100%;
+    background: rgb(33, 133, 208) none repeat scroll 0% 0% / auto padding-box border-box;
+    border: 0px none rgb(255, 255, 255);
+    border-radius: 4px 4px 4px 4px;
+    font: normal normal 700 normal 14px / 14px Lato, "Helvetica Neue", Arial, Helvetica, sans-serif;
+    padding-top: 1.5em;
+  }
