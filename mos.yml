@@ -18,8 +18,7 @@ config_schema:
   - [ "portal.wifi", "o", {title: "WiFi Captive Portal configurations"}]
   - [ "portal.wifi.enable", "b", false, {title: "Enable WiFi captive portal on device boot"}]
   - [ "portal.wifi.gzip", "b", true, {title: "Use and serve gzipped assets (set this to false to serve portal files with .gz -- for dev work)"}]
-  - [ "portal.wifi.hostname", "s", {title: "Redirect hostname or IP (do not include http:// OR trailing slash) - if not set, AP IP will be used"}]
-  - [ "portal.wifi.endpoint", "s", "/wifi", {title: "Endpoint to use for serving WiFi portal ( to set as root directory use backslash / )"}]
+  - [ "portal.wifi.hostname", "s", "setup.device.local", {title: "Hostname to use for captive portal redirect"}]
 
 libs:
   - origin: https://github.com/mongoose-os-libs/wifi
