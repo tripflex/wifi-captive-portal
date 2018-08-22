@@ -16,17 +16,16 @@
  */
 #include "mgos_wifi_captive_portal.h"
 
-static char *s_our_ip = "192.168.4.1";
-static const char *s_portal_redirect_url = "http://192.168.4.1/wifi";
+static char *s_ap_ip = "192.168.4.1";
+static char *s_portal_hostname = "setup.device.local";
 static const char *s_listening_addr = "udp://:53";
 static struct mg_serve_http_opts s_http_server_opts;
 
-char *get_redirect_url(void){
+char *get_redirect_url(void)
+{
     static char redirect_url[256];
-
     // Set URI as HTTPS if ssl cert configured, otherwise use http
-    c_snprintf(redirect_url, sizeof redirect_url, "%s://%s", ( mgos_sys_config_get_http_ssl_cert() ? "https" : "http" ), mgos_sys_config_get_portal_wifi_hostname());
-
+    c_snprintf(redirect_url, sizeof redirect_url, "%s://%s", (mgos_sys_config_get_http_ssl_cert() ? "https" : "http"), s_portal_hostname);
     return redirect_url;
 }
 
@@ -66,7 +65,7 @@ static void dns_ev_handler(struct mg_connection *c, int ev, void *ev_data,
         // fprintf(stdout, "Q type %d name %s\n", rr->rtype, rname);
         if (rr->rtype == MG_DNS_A_RECORD)
         {
-            uint32_t ip = inet_addr(s_our_ip);
+            uint32_t ip = inet_addr(s_ap_ip);
             mg_dns_reply_record(&reply, rr, NULL, rr->rtype, 10, &ip, 4);
         }
     }
@@ -100,27 +99,37 @@ static void root_handler(struct mg_connection *nc, int ev, void *p, void *user_d
         return;
 
 
-    LOG(LL_INFO, ("Root Handler -- Checking for CaptivePortal UserAgent"));
+    LOG(LL_DEBUG, ("Root Handler -- Checking for CaptivePortal UserAgent"));
     struct http_message *msg = (struct http_message *)(p);
     http_msg_print(msg);
 
+    // Init our http server options (set in mgos_wifi_captive_portal_start)
+    struct mg_serve_http_opts opts;
+    memcpy(&opts, &s_http_server_opts, sizeof(opts));
+
+    // Check User-Agent string for "CaptiveNetworkSupport" to issue redirect
     struct mg_str *uahdr = mg_get_http_header(msg, "User-Agent");
-    
     if( uahdr != NULL ){
-        LOG(LL_INFO, ("Root Handler -- Found USER AGENT: %s \n", uahdr->p));
+        LOG(LL_DEBUG, ("Root Handler -- Found USER AGENT: %s \n", uahdr->p));
 
         if (strstr(uahdr->p, "CaptiveNetworkSupport") != NULL ){
-            LOG(LL_INFO, ( "Root Handler -- Found USER AGENT CaptiveNetworkSupport -- Sending Redirect!\n" ) );
+            LOG(LL_DEBUG, ( "Root Handler -- Found USER AGENT CaptiveNetworkSupport -- Sending Redirect!\n" ) );
             redirect_ev_handler( nc, ev, p, user_data );
             return;
         }
     }
 
-    // Serve from root using our http server options (set in mgos_wifi_captive_portal_start)
-    struct mg_serve_http_opts opts;
-    memcpy(&opts, &s_http_server_opts, sizeof(opts));
-    // Potentially handle any gzip requests
-    handle_gzip(nc, msg, &opts);
+    // Check Host header for our hostname (to serve captive portal)
+    struct mg_str *hhdr = mg_get_http_header(hm, "Host");
+    // Host matches our portal hostname, so now we either serve assets (JS/CSS) or HTML file
+    if (hhdr != NULL && mg_casecmp(s_portal_hostname, hhdr->p) == 0)
+    {
+        // Add GZIP Content-Encoding header if gzip file is requested
+        handle_gzip(nc, msg, &opts);
+
+    }
+
+    // And finally, serve it up
     mg_serve_http(nc, msg, opts);
 }
 
@@ -153,7 +162,7 @@ static void portal_handler(struct mg_connection *nc, int ev, void *p, void *user
 
     } else {
 
-        mg_http_serve_file(nc, msg, "portal.html", mg_mk_str("text/html"), mg_mk_str("Access-Control-Allow-Origin: *"));
+        mg_http_serve_file(nc, msg, "wifi_portal.html", mg_mk_str("text/html"), mg_mk_str("Access-Control-Allow-Origin: *"));
     }
 
     // mg_serve_http(nc, msg, opts);
@@ -163,12 +172,21 @@ bool mgos_wifi_captive_portal_start(void)
 {
     LOG(LL_INFO, ("Starting WiFi Captive Portal..."));
 
+    /*
+     *    TODO:
+     *    Maybe need to figure out way to handle DNS for captive portal, if user has defined AP hostname,
+     *    as WiFi lib automatically sets up it's own DNS responder for the hostname when one is set
+     */
     // if (mgos_sys_config_get_wifi_ap_enable() && mgos_sys_config_get_wifi_ap_hostname() != NULL) {
-
     // }
+
     // Bind DNS for Captive Portal
     struct mg_connection *dns_c = mg_bind(mgos_get_mgr(), s_listening_addr, dns_ev_handler, 0);
     mg_set_protocol_dns(dns_c);
+    // Set IP address to respond to DNS queries with
+    s_ap_ip = mgos_sys_config_get_wifi_ap_ip();
+    // Set Hostname used for serving DNS captive portal
+    s_portal_hostname = mgos_sys_config_get_portal_wifi_hostname();
 
     if (dns_c == NULL)
     {
@@ -186,30 +204,28 @@ bool mgos_wifi_captive_portal_start(void)
     // document_root should be root directory as portal files are copied directly to root directory (not in sub directory ... don't know how to do that with mos yet?)
     s_http_server_opts.document_root = "/";
 
-    // Add GZIP mime types for css.gz and js.gz
-    s_http_server_opts.custom_mime_types = ".js.gz=application/javascript; charset=utf-8,.css.gz=text/css; charset=utf-8";
+    // Add GZIP mime types for HTML, JavaScript, and CSS files
+    s_http_server_opts.custom_mime_types = ".html.gz=text/html; charset=utf-8,.js.gz=application/javascript; charset=utf-8,.css.gz=text/css; charset=utf-8";
 
     // CORS
     s_http_server_opts.extra_headers = "Access-Control-Allow-Origin: *";
 
-    // Build rewrite for hostname, pointing at portal HTML file
-    static char rewrites[256];
-    c_snprintf(rewrites, sizeof rewrites, "@%s=/wifi_portal.html", mgos_sys_config_get_portal_wifi_hostname() );
-    s_http_server_opts.url_rewrites = rewrites;
+    // Rewrites are basically useless in MOS right now since SPIFFS only supports flat filesystem
+    // static char rewrites[256];
+    // c_snprintf(rewrites, sizeof rewrites, "@%s=/wifi_portal.html", mgos_sys_config_get_portal_wifi_hostname() );
+    // s_http_server_opts.url_rewrites = rewrites;
 
     // static char portal_endpoint[256];
     // // Endpoint includes preprended slash already, add trailing slash and * wildcard (for gzip)
     // c_snprintf(portal_endpoint, sizeof portal_endpoint, "%s/*", mgos_sys_config_get_portal_wifi_endpoint() );
     // LOG( LL_DEBUG, ( "Registering Captive Portal Endpoint %s", portal_endpoint ) );
+    // mgos_register_http_endpoint(portal_endpoint, portal_handler, NULL);
 
     /**
-     * Root handler to check for User-Agent captive portal support, and to serve portal assets
-     * Because we redirect for captive portal to a hostname, "technically" the assets will be served from root HTTP directory
+     * Root handler to check for User-Agent captive portal support, check for our redirect hostname to serve portal HTML file,
+     * and to serve CSS and JS assets to client (after matching hostname in Host header)
      */
     mgos_register_http_endpoint("/", root_handler, NULL);
-
-    // Portal web UI endpoint
-    // mgos_register_http_endpoint(portal_endpoint, portal_handler, NULL);
 
     // Known HTTP GET requests to check for Captive Portal
     mgos_register_http_endpoint("/mobile/status.php", redirect_ev_handler, NULL);         // Android 8.0 (Samsung s9+)
