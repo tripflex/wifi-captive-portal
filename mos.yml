@@ -17,11 +17,12 @@ config_schema:
   - [ "portal", "o", {title: "Captive Portal configurations"}]
   - [ "portal.wifi", "o", {title: "WiFi Captive Portal configurations"}]
   - [ "portal.wifi.enable", "b", false, {title: "Enable WiFi captive portal on device boot"}]
-  - [ "portal.wifi.gzip", "b", true, {title: "Use and serve gzipped assets (set this to false to serve portal files with .gz -- for dev work)"}]
+  - [ "portal.wifi.gzip", "b", false, {title: "Whether or not to serve gzip HTML file (set to false to serve standard HTML for dev)"}]
   - [ "portal.wifi.hostname", "s", "setup.device.local", {title: "Hostname to use for captive portal redirect"}]
 
 libs:
   - origin: https://github.com/mongoose-os-libs/wifi
+  - origin: https://github.com/mongoose-os-libs/http-server
   - origin: https://github.com/mongoose-os-libs/rpc-service-wifi
   - origin: https://github.com/mongoose-os-libs/rpc-common
 
@@ -33,7 +34,6 @@ tags:
 
 cdefs:
   MGOS_ENABLE_WIFI_SETUP_CHECK: 0
-  MG_ENABLE_HTTP_URL_REWRITES: 1
 
 init_after:
   - wifi

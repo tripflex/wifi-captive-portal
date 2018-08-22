@@ -19,6 +19,7 @@
 #define SMYLES_MOS_LIBS_WIFI_CAPTIVE_PORTAL_H_
 
 #include <stdbool.h>
+#include <string.h>
 #include <mgos.h>
 #include "mgos_http_server.h"
 

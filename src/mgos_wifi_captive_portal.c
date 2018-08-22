@@ -16,9 +16,11 @@
  */
 #include "mgos_wifi_captive_portal.h"
 
-static char *s_ap_ip = "192.168.4.1";
-static char *s_portal_hostname = "setup.device.local";
+static const char *s_ap_ip;
+static const char *s_portal_hostname;
 static const char *s_listening_addr = "udp://:53";
+static int s_serve_gzip;
+
 static struct mg_serve_http_opts s_http_server_opts;
 
 char *get_redirect_url(void)
@@ -120,58 +122,42 @@ static void root_handler(struct mg_connection *nc, int ev, void *p, void *user_d
     }
 
     // Check Host header for our hostname (to serve captive portal)
-    struct mg_str *hhdr = mg_get_http_header(hm, "Host");
+    struct mg_str *hhdr = mg_get_http_header(msg, "Host");
     // Host matches our portal hostname, so now we either serve assets (JS/CSS) or HTML file
     if (hhdr != NULL && mg_casecmp(s_portal_hostname, hhdr->p) == 0)
     {
-        // Add GZIP Content-Encoding header if gzip file is requested
-        handle_gzip(nc, msg, &opts);
+        // Check if gzip file was requested
+        struct mg_str uri = mg_mk_str_n(msg->uri.p, msg->uri.len);
+        bool gzip = strncmp(uri.p + uri.len - 3, ".gz", 3) == 0;
+        // Check if URI is root directory
+        bool uriroot = strcmp( uri.p, "/" );
+
+        // If gzip file requested (js/css) set Content-Encoding
+        if (gzip){
+            opts.extra_headers = "Content-Encoding: gzip";
+        }
+
+        if (uriroot)
+        {
+            // Set index file to our portal HTML file
+            // opts.index_files = "wifi_portal.html";
+            if( s_serve_gzip ){
+                mg_http_serve_file(nc, msg, "wifi_portal.html.gz", mg_mk_str("text/html"), mg_mk_str("Content-Encoding: gzip"));
+            } else {
+                mg_http_serve_file(nc, msg, "wifi_portal.html", mg_mk_str("text/html"), mg_mk_str("Access-Control-Allow-Origin: *"));
+            }
+
+        } else {
+            // Serve non-root requested file
+            mg_serve_http(nc, msg, opts);
+        }
 
     }
-
-    // And finally, serve it up
-    mg_serve_http(nc, msg, opts);
-}
-
-static void portal_handler(struct mg_connection *nc, int ev, void *p, void *user_data)
-{
-    (void)user_data;
-    if (ev != MG_EV_HTTP_REQUEST)
-    {
-        return;
-    }
-    LOG(LL_INFO, ("Portal Handler Called"));
-    struct http_message *msg = (struct http_message *)(p);
-
-    http_msg_print(msg);
-
-    struct mg_serve_http_opts opts;
-    memcpy(&opts, &s_http_server_opts, sizeof(opts));
-    
-    // handle_gzip(nc, msg, &opts);
-
-    struct mg_str uri = mg_mk_str_n(msg->uri.p, msg->uri.len);
-    bool gzip = strncmp(uri.p + uri.len - 3, ".gz", 3) == 0;
-    // bool portal = strncmp(uri.p, , 3) == 0;
-
-    if (gzip)
-    {
-        mg_http_serve_file(nc, msg, uri.p, mg_mk_str("text/html"), mg_mk_str("Content-Encoding: gzip"));
-        opts.extra_headers = "Content-Encoding: gzip";
-        // mg_serve_http(nc, msg, opts);
-
-    } else {
-
-        mg_http_serve_file(nc, msg, "wifi_portal.html", mg_mk_str("text/html"), mg_mk_str("Access-Control-Allow-Origin: *"));
-    }
-
-    // mg_serve_http(nc, msg, opts);
 }
 
 bool mgos_wifi_captive_portal_start(void)
 {
     LOG(LL_INFO, ("Starting WiFi Captive Portal..."));
-
     /*
      *    TODO:
      *    Maybe need to figure out way to handle DNS for captive portal, if user has defined AP hostname,
@@ -187,6 +173,7 @@ bool mgos_wifi_captive_portal_start(void)
     s_ap_ip = mgos_sys_config_get_wifi_ap_ip();
     // Set Hostname used for serving DNS captive portal
     s_portal_hostname = mgos_sys_config_get_portal_wifi_hostname();
+    s_serve_gzip = mgos_sys_config_get_portal_wifi_gzip();
 
     if (dns_c == NULL)
     {
