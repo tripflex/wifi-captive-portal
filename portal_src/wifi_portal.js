@@ -28,15 +28,18 @@ var WiFiPortal = {
         timedout: false,
         ssid: false,
         init: function(){
-            this._checks = 0; // Reset number of checks to 0
-            this.success = false;
-            setTimeout(WiFiPortal.Test.timeout, (this._timeout * 1000) );
+            WiFiPortal.Test._checks = 0; // Reset number of checks to 0
+            WiFiPortal.Test.success = false;
+            // Timeout callback
+            setTimeout(WiFiPortal.Test.timeout, ( WiFiPortal.Test._timeout * 1000 ) );
+            // Initial Check
+            setTimeout(WiFiPortal.check, (WiFiPortal.Test._interval * 1000));
         },
         timeout: function(){
-            if( ! this.success ){
-                this.timedout = true;
+            if( ! WiFiPortal.Test.success ){
+                WiFiPortal.Test.timedout = true;
                 WiFiPortal.Info.hide();
-                WiFiPortal.Error.show('Test has timed out after ' + this._timeout + ' seconds, please check the credentials and try again.');
+                WiFiPortal.Error.show('Test has timed out after ' + WiFiPortal.Test._timeout + ' seconds, please check the credentials and try again.');
             }
         },
         check: function(){
@@ -165,7 +168,7 @@ var WiFiPortal = {
         // httpRequest.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
         httpRequest.open(type, '/rpc/' + rpc );
         httpRequest.setRequestHeader("Content-Type", "application/json"); // must be after open
-        httpRequest.send( data );
+        httpRequest.send(JSON.stringify(data));
     },
     rssiToStrength: function (rssi) {
         if (rssi == 0 || rssi <= -100) {

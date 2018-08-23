@@ -221,11 +221,12 @@ static void mgos_wifi_captive_portal_save_rpc_handler(struct mg_rpc_request_info
         return;
     }
 
-    LOG(LL_INFO, ("WiFi.PortalSave RPC Handler ssid: %s", ssid));
+    LOG(LL_INFO, ("WiFi.PortalSave RPC Handler ssid: %s pass: %s", ssid, pass));
 
     test_sta_vals.ssid = ssid;
     test_sta_vals.pass = pass;
     
+    mgos_wifi_disconnect();
     bool result = mgos_wifi_setup_sta(&test_sta_vals);
     mg_rpc_send_responsef(ri, "{ testing: %Q, result: %B }", test_sta_vals.ssid, result);
 

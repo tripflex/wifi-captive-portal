@@ -2,6 +2,8 @@
 
 This library adds a captive portal to the wifi AP, when a client connects (desktop/mobile, etc), it will prompt the user to "Sign in to Network", and will display a webpage for the user to setup/configure wifi.
 
+![Screenshot](https://raw.githubusercontent.com/tripflex/wifi-captive-portal/dev/screenshot.png)
+
 ## Features
 - Custom setting and helper functions to enable/disable Captive Portal
 - Completely vanilla JavaScript, no jQuery, Zepto, or other libraries required (because we all know space is limited)
