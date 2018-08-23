@@ -22,6 +22,22 @@
 #include <string.h>
 #include <mgos.h>
 #include "mgos_http_server.h"
+#include "mgos_event.h"
+
+#define MGOS_WIFI_CAPTIVE_PORTAL_EV_BASE MGOS_EVENT_BASE('W', 'C', 'P')
+
+enum mgos_wifi_captive_portal_event
+{
+    MGOS_WIFI_CAPTIVE_PORTAL_TEST_START = MGOS_WIFI_CAPTIVE_PORTAL_EV_BASE,
+    /**
+   * Fired when next cron entry is scheduled
+   * 
+   * ev_data: struct mgos_cron_entry
+   */
+    MGOS_WIFI_CAPTIVE_PORTAL_TEST_END, //TODO
+    MGOS_WIFI_CAPTIVE_PORTAL_TEST_SUCCESS,
+    MGOS_WIFI_CAPTIVE_PORTAL_TEST_FAILED //TODO
+};
 
 #ifdef __cplusplus
 extern "C"

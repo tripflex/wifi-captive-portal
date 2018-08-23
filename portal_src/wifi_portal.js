@@ -1,164 +1,173 @@
-document.addEventListener('DOMContentLoaded', function() {
-    var netsHttpRequest;
-    var testHttpRequest;
-    var checkHttpRequest;
-    var connectionChecks = 0;
+var WiFiPortal = {
+    _msg_proto: function (elID) {
+        return {
+            $el: document.getElementById(elID),
+            show: function (msg) {
+                this.$el.innerHTML = msg;
+                this.$el.style.display = 'block';
+            },
+            hide: function () {
+                this.$el.style.display = 'none';
+            }
+        };
+    },
+    init: function(){
+        WiFiPortal.Info = new WiFiPortal._msg_proto( "info" );
+        WiFiPortal.Error = new WiFiPortal._msg_proto( "error" );
+        document.getElementById("rescan").addEventListener('click', WiFiPortal.rescan);
+        document.getElementById("save").addEventListener('click', WiFiPortal.save);
+        WiFiPortal.rescan(); // Refresh initially to load wifi networks
+    },
+    Info: {},
+    Error: {},
+    Test: {
+        _timeout: 60,
+        _checks: 0,
+        _interval: 5, // Interval (in seconds) to check wifi status
+        success: false,
+        timedout: false,
+        ssid: false,
+        init: function(){
+            this._checks = 0; // Reset number of checks to 0
+            this.success = false;
+            setTimeout(WiFiPortal.Test.timeout, (this._timeout * 1000) );
+        },
+        timeout: function(){
+            if( ! this.success ){
+                this.timedout = true;
+                WiFiPortal.Info.hide();
+                WiFiPortal.Error.show('Test has timed out after ' + this._timeout + ' seconds, please check the credentials and try again.');
+            }
+        },
+        check: function(){
 
-    var errEl = document.getElementById("error");
-    var infoEl = document.getElementById("info");
+            WiFiPortal.rpcCall( 'GET', 'Sys.GetInfo', 'Checking device WiFi status...', false, function(resp){
+                var errorMsg = 'Error'; // placeholder
 
-    function showError( message ){
-        errEl.innerHTML = message;
-        errEl.style.display = 'block';
-    }
-    function hideError(){
-        errEl.style.display = 'none';
-    }
-    function showInfo( message ){
-        infoEl.style.display = 'block';
-        infoEl.innerHTML = message;
-    }
-    function hideInfo( message ){
-        infoEl.style.display = 'none';
-    }
+                if( resp ){
+                    
+                    if( resp.wifi && resp.wifi.status && resp.wifi.ssid ){
 
-    function refreshNetworks() {
-        netsHttpRequest = new XMLHttpRequest();
+                        // "got ip" means successful connection to WiFi, also check that SSId matches one we're testing against
+                        if( resp.wifi.status === 'got ip' && resp.wifi.ssid === WiFiPortal.Test.ssid ){
+                            WiFiPortal.Test.success = true;
+                            WiFiPortal.Error.hide();
+                            WiFiPortal.Info.show('WiFi connection successful!');
+                        } else {
+                            errorMsg = 'WiFi current status is ' + resp.wifi.status;
+                        }
 
-        if (!netsHttpRequest) {
-            showError( 'Unable to create an XMLHttpRequest, try to manually set' );
-            return false;
+                    } else {
+                        errorMsg = 'Received response, error getting WiFi status';
+                    }
+
+                } else {
+                    WiFiPortal.Info.hide();
+                    WiFiPortal.Error.show( 'Error getting WiFi status, trying again in 5 seconds...' );
+                }
+
+                WiFiPortal.Test._checks++;
+
+                if( ! WiFiPortal.Test.success && ! WiFiPortal.Test.timedout ){
+                    WiFiPortal.Info.hide();
+                    WiFiPortal.Error.show(errorMsg + ', check ' + WiFiPortal.Test._checks + ', trying again in ' + WiFiPortal.Test._interval + ' seconds...');
+                    setTimeout(WiFiPortal.Test.check, (WiFiPortal.Test._interval * 1000) );
+                }
+            });
+
         }
+    },
+    save: function(){
+        var ssid = document.getElementById('networks').value;
+        var password = document.getElementById('password').value;
+        
+        WiFiPortal.Test.ssid = ssid; // Set SSID value in test so we can verify connection is to that exact SSID
 
-        showInfo( 'Scanning for WiFi networks in range of device...' );
-
-        netsHttpRequest.onreadystatechange = function(){
-
-            if (netsHttpRequest.readyState !== XMLHttpRequest.DONE || netsHttpRequest.status !== 200) {
-                //hideInfo();
-                //showError('There was a problem with the request.');
-                return;
+        WiFiPortal.rpcCall('POST', 'WiFi.PortalSave', 'Sending credentials to device to test...', { ssid: ssid, pass: password } , function( resp ){
+            // True means we received a response, but no data
+            if( resp && resp !== true ){
+                WiFiPortal.Error.hide(); // Hide error when saving (to remove stale errors)
+                WiFiPortal.Info.show('Device is testing WiFi connection, please wait...');
+                WiFiPortal.Test.init();
+            } else {
+                WiFiPortal.Error.show('Error sending credentials to device, please try again');
             }
 
-            var parsedNets = JSON.parse( netsHttpRequest.responseText );
-            // console.log( parsedNets );
+        });
+    },
+    rescan: function () {
+
+        WiFiPortal.rpcCall('POST', 'Wifi.Scan', 'Scanning for WiFi networks in range of device...', false, function ( resp ) {
             
-            if( parsedNets.length > 0 ){
+            if (resp && resp.length > 0) {
 
                 var netSelect = document.getElementById("networks");
                 netSelect.removeAttribute("disabled"); // Remove disabled (on page load)
                 netSelect.innerHTML = '<option value="-1" disabled="disabled" selected="selected">Select WiFi Networks</option>'; // clear any existing ones
 
-                parsedNets.forEach( function( net ){
+                resp.forEach(function (net) {
                     // console.log( net );
                     var opt = document.createElement('option');
-                    opt.innerHTML = net.ssid + " (" + net.bssid + ") - " + getStrengthFromRSSI( net.rssi ) + "% / " + net.rssi;
+                    opt.innerHTML = net.ssid + " (" + net.bssid + ") - " + WiFiPortal.rssiToStrength(net.rssi) + "% / " + net.rssi;
                     opt.value = net.ssid;
                     netSelect.appendChild(opt);
                 });
 
-                showInfo( "Please select from one of the " + parsedNets.length + " WiFi networks found.  This only configures WiFi settings, use the mobile app to configure other settings." );
+                WiFiPortal.Info.show("Please select from one of the " + resp.length + " WiFi networks found.");
 
             } else {
-                hideInfo();
-                showError( 'No networks found, try again...');
+                WiFiPortal.Info.hide();
+                WiFiPortal.Error.show('No networks found, try again...');
             }
 
-        };
-        // netsHttpRequest.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-        netsHttpRequest.open('POST', '/rpc/Wifi.Scan');
-        netsHttpRequest.setRequestHeader("Content-Type", "application/json"); // must be after open
-        netsHttpRequest.send();
-    }
+        });
 
-    function testCredentials(){
-        testHttpRequest = new XMLHttpRequest();
-        
-        showInfo( 'Testing WiFi connection and credentials...' );
+    },
+    rpcCall: function (type, rpc, optInfoMsg, data, callback) {
 
-        if (!testHttpRequest) {
-            showError( "Unable to create an XMLHttpRequest and test" );
+        httpRequest = new XMLHttpRequest();
+
+        if (!httpRequest) {
+            WiFiPortal.Error.show('Unable to create an XMLHttpRequest, try to manually set');
             return false;
         }
 
-        var ssid = document.getElementById('networks').value;
-        var password = document.getElementById('password').value;
-
-        testHttpRequest.onreadystatechange = function(){
-        
-            if (netsHttpRequest.readyState !== XMLHttpRequest.DONE || netsHttpRequest.status !== 200) {
-                return;
-            }
-            
-            hideError();
-            showInfo( 'Testing credentials, please wait...' );
-            
-
-            setTimeout( function(){
-                hideInfo();
-                showError( 'Test has timed out after 60 seconds, please check the credentials and try again.' );
-            }, 60000 );
-        };
-        // testHttpRequest.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-        testHttpRequest.open('POST', '/rpc/Provision.WiFi');
-        testHttpRequest.setRequestHeader("Content-Type", "application/json"); // must be after open
-        testHttpRequest.send( JSON.stringify( { ssid: ssid, pass: password } ) );
-    }
-
-    function checkWifiSuccess(){
-        showInfo('Checking wifi connection status ...');
-
-        checkHttpRequest = new XMLHttpRequest();
-
-        if (!checkHttpRequest) {
-            showError( "Unable to create an XMLHttpRequest and check" );
-            return false;
+        if( optInfoMsg !== undefined && optInfoMsg ){
+            WiFiPortal.Info.show(optInfoMsg);
         }
 
-        checkHttpRequest.onreadystatechange = function(){
-        
-            if (netsHttpRequest.readyState !== XMLHttpRequest.DONE || netsHttpRequest.status !== 200) {
+        httpRequest.onreadystatechange = function () {
+
+            if (httpRequest.readyState !== XMLHttpRequest.DONE) {
+                console.log('rpcCall httpRequest readyState is NOT done!', httpRequest.readyState );
+                return false;
+            }
+
+            if (httpRequest.status !== 200) {
+                console.log( 'rpcCall httpRequest status is NOT 200!', httpRequest );
+
+                if( httpRequest.responseText && httpRequest.responseText.length > 0 ){
+                    WiFiPortal.Error.show( "Error from device ( " + httpRequest.responseText + " ) -- Please try again");
+                    callback(true);
+                } else {
+                    callback(false);
+                }
                 return;
-            }
-            
-            connectionChecks++;
+            } 
 
-            var checkResults = JSON.parse( netsHttpRequest.responseText );
-            console.log( checkResults );
+            console.log('responseText', httpRequest.responseText);
+            var httpResponse = JSON.parse(httpRequest.responseText);
+            console.log('httpResponse', httpResponse);
 
-            var ssid = document.getElementById('networks').value;
-            
-            // "got ip" will be results if wifi "got ip"
-            if( checkResults && checkResults.success && checkResults.ssid == ssid ){
-
-                showInfo('WiFi connection success, disabling config mode, and rebooting...');
-
-            } else {
-
-            if( connectionChecks > 15 ){
-                log('WiFi conection has failed after 15 checks, please verify SSID and password are correct, and try again.');
-            } else {
-                log('WiFi connection failed or still attempting connection...retying...');
-                window.setTimeout( function(){
-                checkWifiCreds();
-                }, 2000 );
-            }
-
-
-            }
-
-            showInfo( 'Test started, waiting for results...' );
-            setTimeout( checkWifiSuccess, 2000 );
-
+            callback(httpResponse);
         };
 
-        checkHttpRequest.open('GET', '/rpc/Sys.GetInfo');
-        checkHttpRequest.setRequestHeader("Content-Type", "application/json"); // must be after open
-        checkHttpRequest.send();
-    }
-
-    function getStrengthFromRSSI(rssi){
-
+        // httpRequest.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        httpRequest.open(type, '/rpc/' + rpc );
+        httpRequest.setRequestHeader("Content-Type", "application/json"); // must be after open
+        httpRequest.send( data );
+    },
+    rssiToStrength: function (rssi) {
         if (rssi == 0 || rssi <= -100) {
             quality = 0;
         } else if (rssi >= -50) {
@@ -168,9 +177,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         return quality;
-    }
+    },
+};
 
-    document.getElementById("rescan").addEventListener('click', refreshNetworks);
-    document.getElementById("save").addEventListener('click', testCredentials);
-    refreshNetworks(); // Refresh initially to load wifi networks
-});
+// Init once the entire DOM is loaded
+document.addEventListener('DOMContentLoaded', WiFiPortal.init );
