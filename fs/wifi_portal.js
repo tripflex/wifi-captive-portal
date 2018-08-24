@@ -16,12 +16,35 @@ var WiFiPortal = {
         WiFiPortal.Error = new WiFiPortal._msg_proto( "error" );
         document.getElementById("rescan").addEventListener('click', WiFiPortal.rescan);
         document.getElementById("save").addEventListener('click', WiFiPortal.save);
-        document.getElementById("check").addEventListener('click', function () { WiFiPortal.Test.check(true); });
-        
-        // Calling Sys.GetInfo before making connection test, causes infinite disconnect .... not sure why
-        
-        // Disable initial scan on page load ONLY FOR DEV TESTING!
-        //WiFiPortal.rescan();
+        document.getElementById("check").addEventListener('click', WiFiPortal.getInfo );
+       
+        WiFiPortal.getInfo( function(resp){
+
+            console.log( 'Info response', resp );
+            // Call rescan after initial call to get device info
+            WiFiPortal.rescan();
+
+        }, false );
+    },
+    getInfo: function( callback, infoMessage ){
+
+        WiFiPortal.rpcCall('GET', 'Sys.GetInfo', infoMessage ? infoMessage : false, false, function (resp) {
+            var responseVal = 'Error'; // placeholder
+
+            if (resp && resp !== true ) {
+                var jsonResponse = resp.wifi ? resp.wifi : resp;
+                var stringifyJson = JSON.stringify(jsonResponse, undefined, 2);
+                responseVal = WiFiPortal.highlight(stringifyJson);
+            } else {
+                responseVal = "Unable to get info from device";
+            }
+
+            document.getElementById("response").innerHTML = responseVal;
+
+            if( callback ){
+                callback( resp );
+            }
+        });
     },
     Info: {},
     Error: {},
@@ -36,7 +59,7 @@ var WiFiPortal = {
             WiFiPortal.Test._checks = 0; // Reset number of checks to 0
             WiFiPortal.Test.success = false;
             // Initial Check
-            setTimeout(WiFiPortal.Test.check, 4000 );
+            setTimeout( WiFiPortal.Test.check, 4000 );
             // Timeout callback
             setTimeout(WiFiPortal.Test.timeout, ( WiFiPortal.Test._timeout * 1000 ) );
         },
@@ -47,55 +70,48 @@ var WiFiPortal = {
                 WiFiPortal.Error.show('Test has timed out after ' + WiFiPortal.Test._timeout + ' seconds, please check the credentials and try again.');
             }
         },
-        check: function( manual ){
+        check: function(){
 
-            WiFiPortal.rpcCall('GET', 'Sys.GetInfo', manual ? false : 'Checking device WiFi status...', false, function (resp) {
-                var errorMsg = 'Error'; // placeholder
+            WiFiPortal.getInfo( function(resp){
+               var errorMsg = 'Error'; // placeholder
 
-                if( resp ){
-                    
-                    if( resp.wifi ){
-                        
-                        // Output response wifi JSON formatted (2 spaces), and with syntax highlighting
-                        var stringifyJson = JSON.stringify(resp.wifi, undefined, 2);
-                        document.getElementById("response").innerHTML = WiFiPortal.highlight( stringifyJson );
+               if (resp && resp !== true) {
 
-                        if( resp.wifi.status && resp.wifi.ssid ){
-                            // "got ip" means successful connection to WiFi, also check that SSId matches one we're testing against
-                            if (!manual && resp.wifi.status === 'got ip' && resp.wifi.ssid === WiFiPortal.Test.ssid) {
-                                WiFiPortal.Test.success = true;
-                                WiFiPortal.Error.hide();
-                                WiFiPortal.Info.show('WiFi connection successful! Connected to ' + resp.wifi.ssid );
-                            } else {
-                                errorMsg = 'WiFi current status is ' + resp.wifi.status;
-                            }
-                        }
+                   if (resp.wifi) {
 
-                    } else {
-                        errorMsg = 'Received response, error getting WiFi status';
-                    }
+                       // Output response wifi JSON formatted (2 spaces), and with syntax highlighting
+                       var stringifyJson = JSON.stringify(resp.wifi, undefined, 2);
+                       document.getElementById("response").innerHTML = WiFiPortal.highlight(stringifyJson);
 
-                } else {
+                       if (resp.wifi.status && resp.wifi.ssid) {
+                           // "got ip" means successful connection to WiFi, also check that SSId matches one we're testing against
+                           if (resp.wifi.status === 'got ip' && resp.wifi.ssid === WiFiPortal.Test.ssid) {
+                               WiFiPortal.Test.success = true;
+                               WiFiPortal.Error.hide();
+                               WiFiPortal.Info.show('WiFi connection successful! Connected to ' + resp.wifi.ssid);
+                           } else {
+                               errorMsg = 'WiFi current status is ' + resp.wifi.status;
+                           }
+                       }
 
-                    if( ! manual ){
-                        WiFiPortal.Info.hide();
-                        WiFiPortal.Error.show('Error getting WiFi status, trying again in 5 seconds...');
-                    }
+                   } else {
+                       errorMsg = 'Received response, error getting WiFi status';
+                   }
 
+               } else {
+                    WiFiPortal.Info.hide();
+                    WiFiPortal.Error.show('Error getting WiFi status, trying again in 5 seconds...');
+               }
+
+                WiFiPortal.Test._checks++;
+
+                if (!WiFiPortal.Test.success && !WiFiPortal.Test.timedout) {
+                    WiFiPortal.Info.hide();
+                    WiFiPortal.Error.show(errorMsg + ', check ' + WiFiPortal.Test._checks + ', trying again in ' + WiFiPortal.Test._interval + ' seconds...');
+                    setTimeout(WiFiPortal.Test.check, (WiFiPortal.Test._interval * 1000));
                 }
 
-                if( ! manual ){
-                    WiFiPortal.Test._checks++;
-
-                    if (!WiFiPortal.Test.success && !WiFiPortal.Test.timedout) {
-                        WiFiPortal.Info.hide();
-                        WiFiPortal.Error.show(errorMsg + ', check ' + WiFiPortal.Test._checks + ', trying again in ' + WiFiPortal.Test._interval + ' seconds...');
-                        setTimeout(WiFiPortal.Test.check, (WiFiPortal.Test._interval * 1000));
-                    }
-                }
-
-            });
-
+            }, 'Checking device WiFi status...' );
         }
     },
     save: function(){
@@ -122,7 +138,7 @@ var WiFiPortal = {
 
         });
     },
-    rescan: function ( manual ) {
+    rescan: function () {
 
         WiFiPortal.rpcCall('POST', 'Wifi.Scan', 'Scanning for WiFi networks in range of device...', false, function ( resp ) {
             
@@ -146,11 +162,6 @@ var WiFiPortal = {
                 WiFiPortal.Info.hide();
                 WiFiPortal.Error.show('No networks found, try again...');
             }
-            
-            // Show current WiFi status after initial load of page and networks
-            if( manual ){
-                WiFiPortal.Test.check(true);
-            }
 
         });
 
@@ -161,7 +172,7 @@ var WiFiPortal = {
 
         if (!httpRequest) {
             WiFiPortal.Error.show('Unable to create an XMLHttpRequest, try to manually set');
-            return false;
+            return callback( false );
         }
 
         if( optInfoMsg !== undefined && optInfoMsg ){
