@@ -16,8 +16,8 @@ includes:
 config_schema:
   - [ "portal", "o", {title: "Captive Portal configurations"}]
   - [ "portal.wifi", "o", {title: "WiFi Captive Portal configurations"}]
-  - [ "portal.wifi.enable", "b", false, {title: "Enable WiFi captive portal on device boot"}]
-  - [ "portal.wifi.gzip", "b", true, {title: "Whether or not to serve gzip HTML file (set to false to serve standard HTML for dev)"}]
+  - [ "portal.wifi.enable", "b", true, {title: "Enable WiFi captive portal on device boot"}]
+  - [ "portal.wifi.gzip", "b", false, {title: "Whether or not to serve gzip HTML file (set to false to serve standard HTML for dev)"}]
   - [ "portal.wifi.hostname", "s", "setup.device.local", {title: "Hostname to use for captive portal redirect"}]
   - [ "portal.wifi.copy", "b", true, {title: "Copy SSID and Password to wifi.sta after succesful test"}]
   - [ "portal.wifi.disable_ap", "b", true, {title: "Disable AP after succesful connection attempt (only if and after copying values, before reboot)"}]
