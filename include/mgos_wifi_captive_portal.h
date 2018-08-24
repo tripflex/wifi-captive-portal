@@ -19,7 +19,6 @@
 #define SMYLES_MOS_LIBS_WIFI_CAPTIVE_PORTAL_H_
 
 #include <stdbool.h>
-#include <string.h>
 #include <mgos.h>
 #include "mgos_http_server.h"
 #include "mgos_event.h"
@@ -28,13 +27,19 @@
 
 enum mgos_wifi_captive_portal_event
 {
-    MGOS_WIFI_CAPTIVE_PORTAL_TEST_START = MGOS_WIFI_CAPTIVE_PORTAL_EV_BASE,
     /**
-   * Fired when next cron entry is scheduled
-   * 
-   * ev_data: struct mgos_cron_entry
-   */
+     * Fired when RPC call is made to WiFi.PortalSave,
+     * and test is started
+     * 
+     * ev_data: struct mgos_config_wifi_sta *sta
+     */
+    MGOS_WIFI_CAPTIVE_PORTAL_TEST_START = MGOS_WIFI_CAPTIVE_PORTAL_EV_BASE,
     MGOS_WIFI_CAPTIVE_PORTAL_TEST_END, //TODO
+    /**
+     * Fired when succesful connection to Wifi
+     * 
+     * ev_data: struct mgos_config_wifi_sta *sta
+     */
     MGOS_WIFI_CAPTIVE_PORTAL_TEST_SUCCESS,
     MGOS_WIFI_CAPTIVE_PORTAL_TEST_FAILED //TODO
 };
@@ -44,6 +49,9 @@ extern "C"
 {
 #endif /* __cplusplus */
 
+/**
+ * Start captive portal (init RPC, DNS, and HTTP Endpoints)
+ */
 bool mgos_wifi_captive_portal_start(void);
 
 #ifdef __cplusplus

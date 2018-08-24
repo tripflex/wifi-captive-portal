@@ -1,6 +1,6 @@
 author: Myles McNamara <myles@smyl.es>
 type: lib
-description: Captive portal to configure and setup WiFi connection
+description: Captive portal to test, configure, and setup WiFi
 version: 1.0
 # platforms: [ cc3200, cc3220, esp32, esp8266 ]
 
@@ -20,7 +20,8 @@ config_schema:
   - [ "portal.wifi.gzip", "b", true, {title: "Whether or not to serve gzip HTML file (set to false to serve standard HTML for dev)"}]
   - [ "portal.wifi.hostname", "s", "setup.device.local", {title: "Hostname to use for captive portal redirect"}]
   - [ "portal.wifi.copy", "b", true, {title: "Copy SSID and Password to wifi.sta after succesful test"}]
-  - [ "portal.wifi.reboot", "i", 0, {title: "0 to disable, or value (in seconds) to wait and then reboot device, after successful test (and copy/save values)"}]
+  - [ "portal.wifi.disable_ap", "b", true, {title: "Disable AP after succesful connection attempt (only if and after copying values, before reboot)"}]
+  - [ "portal.wifi.reboot", "i", 20, {title: "0 to disable, or value (in seconds) to wait and then reboot device, after successful test (and copy/save values)"}]
 
 libs:
   - origin: https://github.com/mongoose-os-libs/wifi
@@ -36,6 +37,8 @@ tags:
 
 cdefs:
   MGOS_ENABLE_WIFI_SETUP_CHECK: 0
+  # Keep AP enabled while STA active (this needs to be set to 1, but can be bypassed by setting "wifi.ap.keep_enabled" to false later on in code)
+  MGOS_WIFI_ENABLE_AP_STA: 1 
 
 init_after:
   - wifi
