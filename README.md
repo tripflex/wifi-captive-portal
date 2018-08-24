@@ -10,6 +10,7 @@
 - [Mongoose OS Wifi Captive Portal](#mongoose-os-wifi-captive-portal)
     - [Features](#features)
     - [Settings](#settings)
+    - [Installation/Usage](#installationusage)
     - [Required Libraries](#required-libraries)
     - [How it works](#how-it-works)
             - [Known Endpoints](#known-endpoints)
@@ -38,16 +39,26 @@ This library adds a captive portal to the wifi AP, when a client connects (deskt
 - Reboot after succesful SSID/Password test (after saving files)
 
 ## Settings
-Check the `mos.yml` file for latest settings, all settings listed below are defaults
+Check the `mos.yml` file for latest settings, all settings listed below are defaults (**FOR THIS DEV BRANCH!**)
 
 ```yaml
-- [ "portal.wifi.enable", "b", false, {title: "Enable WiFi captive portal on device boot"}]
-- [ "portal.wifi.gzip", "b", true, {title: "Whether or not to serve gzip HTML file (set to false to serve standard HTML for dev)"}]
-- [ "portal.wifi.hostname", "s", "setup.device.local", {title: "Hostname to use for captive portal redirect"}]
-- [ "portal.wifi.copy", "b", true, {title: "Copy SSID and Password to wifi.sta after succesful test"}]
-- [ "portal.wifi.disable_ap", "b", true, {title: "Disable AP after succesful connection attempt (only if and after copying values, before reboot)"}]
-- [ "portal.wifi.reboot", "i", 20, {title: "0 to disable, or value (in seconds) to wait and then reboot device, after successful test (and copy/save values)"}]
+  - [ "portal.wifi.enable", "b", true, {title: "Enable WiFi captive portal on device boot"}]
+  - [ "portal.wifi.gzip", "b", false, {title: "Whether or not to serve gzip HTML file (set to false to serve standard HTML for dev)"}]
+  - [ "portal.wifi.hostname", "s", "setup.device.local", {title: "Hostname to use for captive portal redirect"}]
+  - [ "portal.wifi.copy", "b", true, {title: "Copy SSID and Password to wifi.sta after succesful test"}]
+  - [ "portal.wifi.disable_ap", "b", true, {title: "Disable AP after succesful connection attempt (only if and after copying values, before reboot)"}]
+  - [ "portal.wifi.reboot", "i", 0, {title: "0 to disable, or value (in seconds) to wait and then reboot device, after successful test (and copy/save values)"}]
 ```
+
+## Installation/Usage
+As this branch is specifically for development of the lib, to use the dev branch you must add to your `mos.yml` file like this:
+
+```yaml
+  - origin: https://github.com/tripflex/wifi-captive-portal
+    version: dev
+```
+
+**Note** the `version: dev` which specifies to use the `dev` branch from GitHub
 
 ## Required Libraries
 *These libraries are already defined as dependencies of this library, and is just here for reference (you're probably already using these anyways)*
