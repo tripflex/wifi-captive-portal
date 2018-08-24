@@ -1,4 +1,12 @@
 # Mongoose OS Wifi Captive Portal
+
+- **This is the development branch (`dev` branch) which is to be used for development of the captive portal HTML/JS/CSS.**
+- The `dev` branch has a few differences from `master` branch:
+    - `portal.wifi.gzip` is set to `false` by default (`true` in master branch)
+    - `portal.wifi.enable` is set to `true` by default (`false` in master branch)
+    - There is no `portal_src` directory, as the regular `wifi_portal.html` `wifi_portal.css` and `wifi_portal.js` as located in the `fs` directory
+    - This also means there are no gzip files in the `dev` branch either (so do not enable `gzip` while using `dev` branch)
+
 - [Mongoose OS Wifi Captive Portal](#mongoose-os-wifi-captive-portal)
     - [Features](#features)
     - [Settings](#settings)
