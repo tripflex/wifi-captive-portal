@@ -41,7 +41,8 @@ var WiFiPortal = {
 
             document.getElementById("response").innerHTML = responseVal;
 
-            if( callback ){
+            // Need to check if function since this is called by event handler
+            if ( typeof callback === "function" ) {
                 callback( resp );
             }
         });
