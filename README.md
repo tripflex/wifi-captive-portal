@@ -83,7 +83,7 @@ On the initial load of captive portal page, a scan will be initiated immediately
 
 Once the user enters the password (if there is one), the page will then call the custom RPC endpoint from this library, `WiFi.PortalSave`, which initiates a connection test to the STA using provided credentials.
 
-The captive portal will then wait `5` seconds for first initial check, and then every `10` seconds it will make an RPC call to `Sys.GetInfo` to see if the connection was succesful or not.  After 60 seconds, if the connection is not succesful, a timeout is assumed and notice will be shown on the screen (these values configurable in javascript file)
+The captive portal will then wait `2` seconds for first initial check, and then every `5` seconds it will make an RPC call to `Sys.GetInfo` to see if the connection was succesful or not.  After `35` seconds, if the connection is not succesful, a timeout is assumed and notice will be shown on the screen (these values configurable in javascript file).  `35` seconds was chosen as default wifi lib connect timeout is `30` seconds.
 
 If device succesfully connects to the SSID, and `portal.wifi.copy` is set to `true` (default is `true`) the values will be saved to `wifi.sta`
 

@@ -49,17 +49,18 @@ var WiFiPortal = {
     Info: {},
     Error: {},
     Test: {
-        _timeout: 60,
+        _timeout: 35,
         _checks: 0,
-        _interval: 10, // Interval (in seconds) to check wifi status
+        _interval: 5, // Interval (in seconds) to check wifi status
         success: false,
         timedout: false,
         ssid: false,
         init: function(){
             WiFiPortal.Test._checks = 0; // Reset number of checks to 0
             WiFiPortal.Test.success = false;
-            // Initial Check
-            setTimeout( WiFiPortal.Test.check, 4000 );
+
+            // Initial Check after sending creds to device (if connect is succesful it's normally very quick)
+            setTimeout( WiFiPortal.Test.check, 2000 );
             // Timeout callback
             setTimeout(WiFiPortal.Test.timeout, ( WiFiPortal.Test._timeout * 1000 ) );
         },

@@ -21,7 +21,7 @@ config_schema:
   - [ "portal.wifi.hostname", "s", "setup.device.local", {title: "Hostname to use for captive portal redirect"}]
   - [ "portal.wifi.copy", "b", true, {title: "Copy SSID and Password to wifi.sta after succesful test"}]
   - [ "portal.wifi.disable_ap", "b", true, {title: "Disable AP after succesful connection attempt (only if and after copying values, before reboot)"}]
-  - [ "portal.wifi.reboot", "i", 20, {title: "0 to disable, or value (in seconds) to wait and then reboot device, after successful test (and copy/save values)"}]
+  - [ "portal.wifi.reboot", "i", 0, {title: "0 to disable, or value (in seconds) to wait and then reboot device, after successful test (and copy/save values)"}]
 
 libs:
   - origin: https://github.com/mongoose-os-libs/wifi
