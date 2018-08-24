@@ -19,7 +19,9 @@ var WiFiPortal = {
         document.getElementById("check").addEventListener('click', function () { WiFiPortal.Test.check(true); });
         
         // Calling Sys.GetInfo before making connection test, causes infinite disconnect .... not sure why
-        WiFiPortal.rescan();
+        
+        // Disable initial scan on page load ONLY FOR DEV TESTING!
+        //WiFiPortal.rescan();
     },
     Info: {},
     Error: {},

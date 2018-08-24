@@ -38,9 +38,11 @@ tags:
 cdefs:
   MGOS_ENABLE_WIFI_SETUP_CHECK: 0
   # Keep AP enabled while STA active (this needs to be set to 1, but can be bypassed by setting "wifi.ap.keep_enabled" to false later on in code)
-  MGOS_WIFI_ENABLE_AP_STA: 1 
+  MGOS_WIFI_ENABLE_AP_STA: 1
+  MG_ENABLE_DNS_SERVER: 1
 
 init_after:
   - wifi
+  - http-server
 
 manifest_version: 2017-09-29

@@ -23,7 +23,10 @@
 #include "mgos_utils.h"
 #include "mgos_timers.h"
 #include "mgos_config.h"
+#include "mgos_mongoose.h"
 #include "mgos_wifi_captive_portal.h"
+
+#include "mongoose.h"
 
 static const char *s_ap_ip = "192.168.4.1";
 static const char *s_portal_hostname = "setup.device.local";
@@ -33,6 +36,7 @@ static char *s_test_pass = NULL;
 
 static int s_serve_gzip;
 static int s_connection_retries = 0;
+static int s_captive_portal_init = 0;
 
 static struct mg_serve_http_opts s_http_server_opts;
 static struct mgos_config_wifi_sta *sp_test_sta_vals = NULL;
@@ -261,7 +265,19 @@ static void mgos_wifi_captive_portal_save_rpc_handler(struct mg_rpc_request_info
 }
 
 bool mgos_wifi_captive_portal_start(void){
+
+    if ( s_captive_portal_init ){
+        LOG(LL_ERROR, ("Wifi captive portal already init! Ignoring call to start captive portal!"));
+        return false;
+    }
+
     LOG(LL_INFO, ("Starting WiFi Captive Portal..."));
+
+    if( sp_test_sta_vals == NULL ){
+        // Allocate memory to store sta values in
+        sp_test_sta_vals = (struct mgos_config_wifi_sta *)calloc(1, sizeof(*sp_test_sta_vals));
+    }
+
     // Add RPC
     struct mg_rpc *c = mgos_rpc_get_global();
     mg_rpc_add_handler(c, "WiFi.PortalSave", "{ssid: %Q, pass: %Q}", mgos_wifi_captive_portal_save_rpc_handler, NULL);
@@ -317,14 +333,13 @@ bool mgos_wifi_captive_portal_start(void){
     mgos_register_http_endpoint("/hotspot-detect.html", redirect_ev_handler, NULL);       // iOS 8/9
     mgos_register_http_endpoint("/library/test/success.html", redirect_ev_handler, NULL); // iOS 8/9
 
+    s_captive_portal_init = true;
+
     return true;
 }
 
 bool mgos_wifi_captive_portal_init(void){
     mgos_event_register_base(MGOS_WIFI_CAPTIVE_PORTAL_EV_BASE, "Wifi Captive Portal");
-
-    // Allocate memory to store sta values in
-    sp_test_sta_vals = (struct mgos_config_wifi_sta *)calloc(1, sizeof(*sp_test_sta_vals));
 
     // Check if config is set to enable captive portal on boot
     if (mgos_sys_config_get_portal_wifi_enable())
