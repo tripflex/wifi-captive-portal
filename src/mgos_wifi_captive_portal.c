@@ -98,16 +98,6 @@ static void ip_aquired_cb(int ev, void *ev_data, void *userdata){
     LOG(LL_INFO, ("Wifi Captive Portal IP Aquired from SSID %s", connectedto ) );
     free(connectedto);
 
-    // FOR TESTING
-    if( s_test_pass != NULL && s_test_ssid != NULL ){
-        LOG(LL_INFO, ("s_test_ssid %s s_test_pass %s to STA 1 config (wifi.sta)", s_test_ssid, s_test_pass ));
-    }
-
-    // FOR TESTING
-    if( sp_test_sta_vals != NULL ){
-        LOG(LL_INFO, ("sp_test_sta_vals TEST SSID %s and Password %s to STA 1 config (wifi.sta)", sp_test_sta_vals->ssid, sp_test_sta_vals->pass ) );
-    }
-
     if ( sta != NULL && mgos_sys_config_get_portal_wifi_copy() )
     {
         LOG(LL_INFO, ("Copying SSID %s and Password %s to STA 1 config (wifi.sta)", sta->ssid, sta->pass ) );
@@ -162,7 +152,6 @@ static void root_handler(struct mg_connection *nc, int ev, void *p, void *user_d
     if (ev != MG_EV_HTTP_REQUEST)
         return;
 
-    LOG(LL_INFO, ("Root Handler -- Checking for CaptivePortal UserAgent"));
     struct http_message *msg = (struct http_message *)(p);
     http_msg_print(msg);
 
@@ -210,6 +199,8 @@ static void root_handler(struct mg_connection *nc, int ev, void *p, void *user_d
 
     } else {
 
+        LOG(LL_INFO, ("Root Handler -- Checking for CaptivePortal UserAgent"));
+
         // Check User-Agent string for "CaptiveNetworkSupport" to issue redirect (AFTER checking for Captive Portal Host)
         struct mg_str *uahdr = mg_get_http_header(msg, "User-Agent");
         if (uahdr != NULL)
@@ -242,6 +233,11 @@ static void mgos_wifi_captive_portal_save_rpc_handler(struct mg_rpc_request_info
         return;
     }
 
+    if (sp_test_sta_vals == NULL){
+        // Allocate memory to store sta values in
+        sp_test_sta_vals = (struct mgos_config_wifi_sta *)calloc(1, sizeof(*sp_test_sta_vals));
+    }
+
     sp_test_sta_vals->enable = 1; // Same as (*test_sta_vals).enable
     sp_test_sta_vals->ssid = s_test_ssid;
     sp_test_sta_vals->pass = s_test_pass;
@@ -272,15 +268,6 @@ bool mgos_wifi_captive_portal_start(void){
     }
 
     LOG(LL_INFO, ("Starting WiFi Captive Portal..."));
-
-    if( sp_test_sta_vals == NULL ){
-        // Allocate memory to store sta values in
-        sp_test_sta_vals = (struct mgos_config_wifi_sta *)calloc(1, sizeof(*sp_test_sta_vals));
-    }
-
-    // Add RPC
-    struct mg_rpc *c = mgos_rpc_get_global();
-    mg_rpc_add_handler(c, "WiFi.PortalSave", "{ssid: %Q, pass: %Q}", mgos_wifi_captive_portal_save_rpc_handler, NULL);
 
     /*
      *    TODO:
@@ -325,6 +312,8 @@ bool mgos_wifi_captive_portal_start(void){
      */
     mgos_register_http_endpoint("/", root_handler, NULL);
 
+    // captive.apple.com - DNS request for Mac OSX
+    
     // Known HTTP GET requests to check for Captive Portal
     mgos_register_http_endpoint("/mobile/status.php", redirect_ev_handler, NULL);         // Android 8.0 (Samsung s9+)
     mgos_register_http_endpoint("/generate_204", redirect_ev_handler, NULL);              // Android
@@ -340,6 +329,9 @@ bool mgos_wifi_captive_portal_start(void){
 
 bool mgos_wifi_captive_portal_init(void){
     mgos_event_register_base(MGOS_WIFI_CAPTIVE_PORTAL_EV_BASE, "Wifi Captive Portal");
+    // Add RPC
+    struct mg_rpc *c = mgos_rpc_get_global();
+    mg_rpc_add_handler(c, "WiFi.PortalSave", "{ssid: %Q, pass: %Q}", mgos_wifi_captive_portal_save_rpc_handler, NULL);
 
     // Check if config is set to enable captive portal on boot
     if (mgos_sys_config_get_portal_wifi_enable())
