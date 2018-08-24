@@ -16,9 +16,9 @@
             - [Known Endpoints](#known-endpoints)
     - [Ideal Flow](#ideal-flow)
     - [Directories and Files](#directories-and-files)
-    - [C Functions](#c-functions)
+    - [Available Functions/Methods](#available-functionsmethods)
+        - [C Functions](#c-functions)
         - [MJS](#mjs)
-        - [Available Methods](#available-methods)
     - [Dev for HTML/CSS/JS](#dev-for-htmlcssjs)
     - [RPC Endpoints](#rpc-endpoints)
     - [Events](#events)
@@ -115,7 +115,9 @@ The ideal flow process for the captive portal setup, is as follows:
 - `portal_src` directory contains source files for the captive portal (unminified and not gzipped) *these are not copied to the device on build*
 - `fs` directory contains the captive portal gzipped files (css/js/index)
 
-## C Functions
+## Available Functions/Methods
+
+### C Functions
 ```C
 bool mgos_wifi_captive_portal_start(void)
 ```
@@ -123,13 +125,8 @@ bool mgos_wifi_captive_portal_start(void)
 ### MJS
 ```javascript
 load( 'api_wifiportal.js' );
-```
-
-### Available Methods
-```javascript
 WifiCaptivePortal.start();
 ```
-- Enable WiFi Captive portal
 
 ## Dev for HTML/CSS/JS
 If you wish to customize the html, JS, or CSS files for the portal, you can copy them from the `portal_src` directory, to your root `fs` directory, modify them, and update your `mos.yml` with this value in `config_schema`:
@@ -145,8 +142,8 @@ This disables serving the gzipped version of main portal HTML file `wifi_portal.
 `WiFi.PortalSave` - `{ssid: YOURSSID, pass: PASSWORD }`
 
 ## Events
-`MGOS_WIFI_CAPTIVE_PORTAL_TEST_START` - Test started from RPC call
-`MGOS_WIFI_CAPTIVE_PORTAL_TEST_SUCCESS` - Succesful test called via RPC method
+`MGOS_WIFI_CAPTIVE_PORTAL_TEST_START` - Test started from RPC call ( `ev_data: struct mgos_config_wifi_sta *sta` )
+`MGOS_WIFI_CAPTIVE_PORTAL_TEST_SUCCESS` - Succesful test called via RPC method ( `ev_data: struct mgos_config_wifi_sta *sta` )
 
 ## Reboot Setting
 - The reboot setting is defined as an integer, with 0 (zero) being disabled, and anything greater than 0 enabling the setting.  
