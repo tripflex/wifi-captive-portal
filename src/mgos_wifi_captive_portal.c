@@ -37,9 +37,13 @@ static char *s_test_pass = NULL;
 static int s_serve_gzip;
 static int s_connection_retries = 0;
 static int s_captive_portal_init = 0;
+static int s_captive_portal_rpc_init = 0;
 
 static struct mg_serve_http_opts s_http_server_opts;
 static struct mgos_config_wifi_sta *sp_test_sta_vals = NULL;
+
+static void remove_event_handlers(void);
+static void add_event_handlers(void);
 
 char *get_redirect_url(void){
     static char redirect_url[256];
@@ -80,7 +84,7 @@ static void dns_ev_handler(struct mg_connection *c, int ev, void *ev_data,
         // LOG( LL_INFO, ( "Q type %d name %s\n", rr->rtype, rname ) );
         if (rr->rtype == MG_DNS_A_RECORD)
         {
-            LOG(LL_INFO, ("DNS A Query for %s sending IP %s", rname, s_ap_ip));
+            LOG(LL_DEBUG, ("DNS A Query for %s sending IP %s", rname, s_ap_ip));
             uint32_t ip = inet_addr(s_ap_ip);
             mg_dns_reply_record(&reply, rr, NULL, rr->rtype, 10, &ip, 4);
         }
@@ -101,50 +105,64 @@ static void ip_aquired_cb(int ev, void *ev_data, void *userdata){
     if ( sta != NULL && mgos_sys_config_get_portal_wifi_copy() )
     {
         LOG(LL_INFO, ("Copying SSID %s and Password %s to STA 1 config (wifi.sta)", sta->ssid, sta->pass ) );
+
         mgos_sys_config_set_wifi_sta_enable(true);
         mgos_sys_config_set_wifi_sta_ssid(sta->ssid);
         mgos_sys_config_set_wifi_sta_pass(sta->pass);
 
-        if( mgos_sys_config_get_portal_wifi_disable_ap() ){
-            mgos_sys_config_set_wifi_ap_enable( false );
+        int disable = mgos_sys_config_get_portal_wifi_disable();
+        if ( disable == 1 || disable == 2 ){
+            mgos_sys_config_set_wifi_ap_enable(false);
+        }
+        // Disable captive portal
+        if( disable == 2 ){
+            mgos_sys_config_set_portal_wifi_enable(false);
         }
 
         char *err = NULL;
-        if (!save_cfg(&mgos_sys_config, &err))
-        {
+        if (!save_cfg(&mgos_sys_config, &err)){
             LOG(LL_ERROR, ("Copy STA Values, Save Config Error: %s", err));
             free(err);
         } else {
             int reboot_ms = (mgos_sys_config_get_portal_wifi_reboot() * 1000);
-            if (reboot_ms > 0)
-            {
+            if (reboot_ms > 0){
                 mgos_system_restart_after(reboot_ms);
             }
         }
 
-
     }
 
-    // Remove handler after first connection
-    mgos_event_remove_handler(MGOS_WIFI_EV_STA_IP_ACQUIRED, ip_aquired_cb, userdata);
+    remove_event_handlers();
 }
 
-static void maybe_reconnect(int ev, void *ev_data, void *userdata)
-{
-    LOG(LL_INFO, ("Wifi Captive Portal - Retrying Connection..."));
+static void maybe_reconnect(int ev, void *ev_data, void *userdata){
+    s_connection_retries++;
+    LOG(LL_INFO, ("Wifi Captive Portal - Retrying Connection... Attempt %d", s_connection_retries ) );
     // Soooo ... if we call Sys.GetInfo before attempting to make test connection to STA
     // we will constantly get a DISCONNECTED and it will never connect ... not sure why or what to do about it
     mgos_wifi_connect();
 
-    if( s_connection_retries > 15 ){
-        mgos_event_remove_handler(MGOS_WIFI_EV_STA_DISCONNECTED, maybe_reconnect, userdata);
+    if (s_connection_retries > 15){
+        remove_event_handlers();
+        mgos_event_trigger(MGOS_WIFI_CAPTIVE_PORTAL_TEST_FAILED, sp_test_sta_vals);
     }
+}
+
+static void remove_event_handlers(void){
+    mgos_event_remove_handler(MGOS_WIFI_EV_STA_DISCONNECTED, maybe_reconnect, NULL);
+    mgos_event_remove_handler(MGOS_WIFI_EV_STA_IP_ACQUIRED, ip_aquired_cb, NULL);
+}
+
+static void add_event_handlers(void){
+    // We use NULL for userdata to make sure they are removed correctly
+    mgos_event_add_handler(MGOS_WIFI_EV_STA_IP_ACQUIRED, ip_aquired_cb, NULL);
+    mgos_event_add_handler(MGOS_WIFI_EV_STA_DISCONNECTED, maybe_reconnect, NULL);
 }
 
 static void http_msg_print(const struct http_message *msg){
     // LOG(LL_INFO, ("     message: \"%.*s\"\n", msg->message.len, msg->message.p));
-    LOG(LL_INFO, ("      method: \"%.*s\"", msg->method.len, msg->method.p));
-    LOG(LL_INFO, ("         uri: \"%.*s\"", msg->uri.len, msg->uri.p));
+    LOG(LL_DEBUG, ("      method: \"%.*s\"", msg->method.len, msg->method.p));
+    LOG(LL_DEBUG, ("         uri: \"%.*s\"", msg->uri.len, msg->uri.p));
 }
 
 static void root_handler(struct mg_connection *nc, int ev, void *p, void *user_data){
@@ -162,8 +180,7 @@ static void root_handler(struct mg_connection *nc, int ev, void *p, void *user_d
     // Check Host header for our hostname (to serve captive portal)
     struct mg_str *hhdr = mg_get_http_header(msg, "Host");
 
-    if (hhdr != NULL && strstr(hhdr->p, s_portal_hostname) != NULL)
-    {
+    if (hhdr != NULL && strstr(hhdr->p, s_portal_hostname) != NULL){
         // TODO: check Accept-Encoding header for gzip before serving gzip
         LOG(LL_INFO, ("Root Handler -- Host matches Captive Portal Host \n"));
         // Check if gzip file was requested
@@ -180,11 +197,9 @@ static void root_handler(struct mg_connection *nc, int ev, void *p, void *user_d
             opts.extra_headers = "Content-Encoding: gzip";
         }
 
-        if (uriroot)
-        {
+        if (uriroot){
             LOG(LL_INFO, ("Root Handler -- Captive Portal Root Requested\n"));
-            // Set index file to our portal HTML file
-            // opts.index_files = "wifi_portal.html";
+
             if( s_serve_gzip ){
                 LOG(LL_INFO, ("Root Handler -- Captive Portal Serving GZIP HTML \n"));
                 mg_http_serve_file(nc, msg, "wifi_portal.html.gz", mg_mk_str("text/html"), mg_mk_str("Content-Encoding: gzip"));
@@ -203,12 +218,10 @@ static void root_handler(struct mg_connection *nc, int ev, void *p, void *user_d
 
         // Check User-Agent string for "CaptiveNetworkSupport" to issue redirect (AFTER checking for Captive Portal Host)
         struct mg_str *uahdr = mg_get_http_header(msg, "User-Agent");
-        if (uahdr != NULL)
-        {
+        if (uahdr != NULL){
             // LOG(LL_INFO, ("Root Handler -- Found USER AGENT: %s \n", uahdr->p));
 
-            if (strstr(uahdr->p, "CaptiveNetworkSupport") != NULL)
-            {
+            if (strstr(uahdr->p, "CaptiveNetworkSupport") != NULL){
                 LOG(LL_INFO, ("Root Handler -- Found USER AGENT CaptiveNetworkSupport -- Sending Redirect!\n"));
                 redirect_ev_handler(nc, ev, p, user_data);
                 return;
@@ -243,7 +256,7 @@ static void mgos_wifi_captive_portal_save_rpc_handler(struct mg_rpc_request_info
     sp_test_sta_vals->pass = s_test_pass;
 
     // Make sure to remove any existing handlers (in case of previous RPC call)
-    mgos_event_remove_handler(MGOS_WIFI_EV_STA_IP_ACQUIRED, ip_aquired_cb, sp_test_sta_vals);
+    remove_event_handlers();
 
     LOG(LL_INFO, ("WiFi.PortalSave RPC Handler ssid: %s pass: %s", s_test_ssid, s_test_pass));
 
@@ -251,10 +264,10 @@ static void mgos_wifi_captive_portal_save_rpc_handler(struct mg_rpc_request_info
     bool result = mgos_wifi_setup_sta(sp_test_sta_vals);
     mg_rpc_send_responsef(ri, "{ testing: %Q, result: %B }", s_test_ssid, result);
 
-    mgos_event_trigger(MGOS_WIFI_CAPTIVE_PORTAL_TEST_START, sp_test_sta_vals);
-
-    mgos_event_add_handler(MGOS_WIFI_EV_STA_IP_ACQUIRED, ip_aquired_cb, sp_test_sta_vals);
-    mgos_event_add_handler(MGOS_WIFI_EV_STA_DISCONNECTED, maybe_reconnect, NULL);
+    if ( result ){
+        mgos_event_trigger(MGOS_WIFI_CAPTIVE_PORTAL_TEST_START, sp_test_sta_vals);
+        add_event_handlers();
+    }
 
     (void)cb_arg;
     (void)fi;
@@ -266,6 +279,14 @@ bool mgos_wifi_captive_portal_start(void){
         LOG(LL_ERROR, ("Wifi captive portal already init! Ignoring call to start captive portal!"));
         return false;
     }
+
+    // Not really sure how to handle this right now, since the AP can be brought up through code
+    // so for now we don't mess with it
+
+    // if( mgos_sys_config_get_wifi_ap_enable() ){
+    //     LOG(LL_ERROR, ("Wifi captive portal not starting! You must enable AP - wifi.ap.enable"));
+    //     return false;
+    // }
 
     LOG(LL_INFO, ("Starting WiFi Captive Portal..."));
 
@@ -327,15 +348,28 @@ bool mgos_wifi_captive_portal_start(void){
     return true;
 }
 
+bool mgos_wifi_captive_portal_init_rpc(void){
+
+    if( ! s_captive_portal_rpc_init ){
+        // Add RPC
+        struct mg_rpc *c = mgos_rpc_get_global();
+        mg_rpc_add_handler(c, "WiFi.PortalSave", "{ssid: %Q, pass: %Q}", mgos_wifi_captive_portal_save_rpc_handler, NULL);
+        s_captive_portal_rpc_init = true;
+        return true;
+    }
+
+    return false;
+}
+
 bool mgos_wifi_captive_portal_init(void){
     mgos_event_register_base(MGOS_WIFI_CAPTIVE_PORTAL_EV_BASE, "Wifi Captive Portal");
-    // Add RPC
-    struct mg_rpc *c = mgos_rpc_get_global();
-    mg_rpc_add_handler(c, "WiFi.PortalSave", "{ssid: %Q, pass: %Q}", mgos_wifi_captive_portal_save_rpc_handler, NULL);
+
+    if( mgos_sys_config_get_portal_wifi_rpc() ){
+        mgos_wifi_captive_portal_init_rpc();
+    }
 
     // Check if config is set to enable captive portal on boot
-    if (mgos_sys_config_get_portal_wifi_enable())
-    {
+    if (mgos_sys_config_get_portal_wifi_enable()){
         mgos_wifi_captive_portal_start();
     }
 

@@ -10,6 +10,8 @@
 - [Mongoose OS Wifi Captive Portal](#mongoose-os-wifi-captive-portal)
     - [Features](#features)
     - [Settings](#settings)
+        - [Setting Details](#setting-details)
+            - [Reboot Setting `portal.wifi.reboot`](#reboot-setting-portalwifireboot)
     - [Installation/Usage](#installationusage)
     - [Required Libraries](#required-libraries)
     - [How it works](#how-it-works)
@@ -21,16 +23,20 @@
         - [MJS](#mjs)
     - [Dev for HTML/CSS/JS](#dev-for-htmlcssjs)
     - [RPC Endpoints](#rpc-endpoints)
+        - [Response](#response)
     - [Events](#events)
-    - [Reboot Setting](#reboot-setting)
+    - [Other Remarks](#other-remarks)
     - [License](#license)
 
 This library adds a captive portal to the wifi AP, when a client connects (desktop/mobile, etc), it will prompt the user to "Sign in to Network", and will display a webpage for the user to setup/configure wifi.
 
-![Screenshot](https://raw.githubusercontent.com/tripflex/wifi-captive-portal/dev/screenshot.png)
+![OSX Captive Portal](https://raw.githubusercontent.com/tripflex/wifi-captive-portal/dev/osx-portal.gif)
 
 ## Features
+- Provides web UI for testing and configuring WiFi
+- Mobile and desktop devices prompt the "Login to network" window/notification
 - Custom setting and helper functions to enable/disable Captive Portal
+- RPC endpoint for setting and testing wifi credentials (can be used without captive portal)
 - **Completely vanilla JavaScript**, no jQuery, Zepto, or other libraries required (because we all know space is limited)
 - Unminified and non-gzipped files are only `14.2kb` total in size ( `wifi_portal.css - 3kb`, `wifi_portal.html - 1.45kb`, `wifi_portal.js - 9.67kb` )
 - Minified and gzipped files are only `3.26kb` total in size ( `wifi_portal.min.css.gz - 735b`, `wifi_portal.html.gz - 561b`, `wifi_portal.min.js.gz - 2kb` )
@@ -38,19 +44,31 @@ This library adds a captive portal to the wifi AP, when a client connects (deskt
 - Validates user provided SSID and Password
 - Uses gzipped data for small filesize and fast loading (see dev below for using/customizing files)
 - Save/Copy SSID and Password to STA 1 (`wifi.sta`) configuration after succesful test
-- Reboot after succesful SSID/Password test (after saving files)
+- Reboot after sucesful SSID/Password test (after saving files)
 
 ## Settings
 Check the `mos.yml` file for latest settings, all settings listed below are defaults (**FOR THIS DEV BRANCH!**)
 
 ```yaml
   - [ "portal.wifi.enable", "b", true, {title: "Enable WiFi captive portal on device boot"}]
+  - [ "portal.wifi.rpc", "b", true, {title: "Enable Captive Portal RPC Endpoint regardless of whether captive portal is enabled/started"}]
   - [ "portal.wifi.gzip", "b", false, {title: "Whether or not to serve gzip HTML file (set to false to serve standard HTML for dev)"}]
-  - [ "portal.wifi.hostname", "s", "setup.device.local", {title: "Hostname to use for captive portal redirect"}]
+  - [ "portal.wifi.hostname", "s", "setup.device.portal", {title: "Hostname to use for captive portal redirect"}]
   - [ "portal.wifi.copy", "b", true, {title: "Copy SSID and Password to wifi.sta after succesful test"}]
-  - [ "portal.wifi.disable_ap", "b", true, {title: "Disable AP after succesful connection attempt (only if and after copying values, before reboot)"}]
+  - [ "portal.wifi.disable", "i", 2, {title: "0 - do nothing, 1 - Disable AP (wifi.ap.enable), 2 - Disable AP and Captive Portal (portal.wifi.enable) -- after successful test and copy/save values"}]
   - [ "portal.wifi.reboot", "i", 0, {title: "0 to disable, or value (in seconds) to wait and then reboot device, after successful test (and copy/save values)"}]
 ```
+
+### Setting Details
+```yaml
+portal.wifi.disable
+```
+Set this value to `0` to not disable anything, set to `1` to disable AP (set `wifi.ap.enable` to `false`), set to `2` to disable AP (set `wifi.ap.enable` to `false` and set `portal.wifi.enable` to `false`) ... after a sucesful test.
+
+#### Reboot Setting `portal.wifi.reboot`
+- The reboot setting is defined as an integer, with 0 (zero) being disabled, and anything greater than 0 enabling the setting.  
+- This value is based in **Seconds**
+- Device will reboot X seconds after succesful Wifi credential test, and saving values (if enabled)
 
 ## Installation/Usage
 As this branch is specifically for development of the lib, to use the dev branch you must add to your `mos.yml` file like this:
@@ -96,13 +114,13 @@ On the initial load of captive portal page, a scan will be initiated immediately
 
 Once the user enters the password (if there is one), the page will then call the custom RPC endpoint from this library, `WiFi.PortalSave`, which initiates a connection test to the STA using provided credentials.
 
-The captive portal will then wait `2` seconds for first initial check, and then every `5` seconds it will make an RPC call to `Sys.GetInfo` to see if the connection was succesful or not.  After `35` seconds, if the connection is not succesful, a timeout is assumed and notice will be shown on the screen (these values configurable in javascript file).  `35` seconds was chosen as default wifi lib connect timeout is `30` seconds.
+The captive portal will then wait `2` seconds for first initial check, and then every `5` seconds it will make an RPC call to `Sys.GetInfo` to see if the connection was succesful or not.  After `30` seconds, if the connection is not succesful, a timeout is assumed and notice will be shown on the screen (these values configurable in javascript file).  `30` seconds was chosen as default wifi lib connect timeout is `30` seconds.
 
 If device succesfully connects to the SSID, and `portal.wifi.copy` is set to `true` (default is `true`) the values will be saved to `wifi.sta`
 
 If `portal.wifi.disable_ap` is set to `true` (default is `true`), `wifi.ap.enable` will also be saved with value of `false` (does NOT immediately disable AP, device must reboot for changes to apply)
 
-If `portal.wifi.reboot` is a value greater than `0` (default is `20` -- `0` means disabled), the device will then reboot after the value in that setting (based in seconds)
+If `portal.wifi.reboot` is a value greater than `0` (default is `10` -- `0` means disabled), the device will then reboot after the value in that setting (based in seconds)
 
 ## Ideal Flow
 The ideal flow process for the captive portal setup, is as follows:
@@ -142,15 +160,28 @@ This disables serving the gzipped version of main portal HTML file `wifi_portal.
 ## RPC Endpoints
 
 `WiFi.PortalSave` - `{ssid: YOURSSID, pass: PASSWORD }`
+The RPC endpoint will be available even if you do not initalize/start the captive portal, it can be disabled by setting `portal.wifi.rpc` in config to `false`
+
+### Response
+```json
+{ 
+    testing: THESSID,
+    result: RESULT 
+}
+```
+`RESULT` will be either `true` for succesful setup of STA, or `false` if it failed
 
 ## Events
 `MGOS_WIFI_CAPTIVE_PORTAL_TEST_START` - Test started from RPC call ( `ev_data: struct mgos_config_wifi_sta *sta` )
 `MGOS_WIFI_CAPTIVE_PORTAL_TEST_SUCCESS` - Succesful test called via RPC method ( `ev_data: struct mgos_config_wifi_sta *sta` )
+`MGOS_WIFI_CAPTIVE_PORTAL_TEST_FAILED` - Failed connection test (15 reconnect attempts) after RPC call ( `ev_data: struct mgos_config_wifi_sta *sta` )
 
-## Reboot Setting
-- The reboot setting is defined as an integer, with 0 (zero) being disabled, and anything greater than 0 enabling the setting.  
-- This value is based in **Seconds**
-- Device will reboot X seconds after succesful Wifi credential test, and saving values (if enabled)
+## Other Remarks
+- You need to manually set the AP to be enabled on boot, otherwise the captive portal will not run.  This is as simple as defining in your `mos.yml` setting it enabled:
+
+```yaml
+- [ "wifi.ap.enable", true ]
+```
 
 ## License
 Apache 2.0

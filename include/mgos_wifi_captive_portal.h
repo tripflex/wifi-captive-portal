@@ -34,14 +34,18 @@ enum mgos_wifi_captive_portal_event
      * ev_data: struct mgos_config_wifi_sta *sta
      */
     MGOS_WIFI_CAPTIVE_PORTAL_TEST_START = MGOS_WIFI_CAPTIVE_PORTAL_EV_BASE,
-    MGOS_WIFI_CAPTIVE_PORTAL_TEST_END, //TODO
     /**
      * Fired when succesful connection to Wifi
      * 
      * ev_data: struct mgos_config_wifi_sta *sta
      */
     MGOS_WIFI_CAPTIVE_PORTAL_TEST_SUCCESS,
-    MGOS_WIFI_CAPTIVE_PORTAL_TEST_FAILED //TODO
+    /**
+     * Fired when succesful connection to Wifi
+     * 
+     * ev_data: struct mgos_config_wifi_sta *sta
+     */
+    MGOS_WIFI_CAPTIVE_PORTAL_TEST_FAILED
 };
 
 #ifdef __cplusplus

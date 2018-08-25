@@ -12,13 +12,11 @@ var WiFiPortal = {
         };
     },
     init: function(){
+        WiFiPortal.Buttons.init();
         WiFiPortal.Info = new WiFiPortal._msg_proto( "info" );
         WiFiPortal.Error = new WiFiPortal._msg_proto( "error" );
-        document.getElementById("rescan").addEventListener('click', WiFiPortal.rescan);
-        document.getElementById("save").addEventListener('click', WiFiPortal.save);
-        document.getElementById("check").addEventListener('click', WiFiPortal.getInfo );
        
-        WiFiPortal.getInfo( function(resp){
+        WiFiPortal.check( function(resp){
 
             console.log( 'Info response', resp );
             // Call rescan after initial call to get device info
@@ -26,7 +24,9 @@ var WiFiPortal = {
 
         }, false );
     },
-    getInfo: function( callback, infoMessage ){
+    check: function( callback, infoMessage ){
+
+        WiFiPortal.Buttons.disableAll( 'Please wait, checking...' );
 
         WiFiPortal.rpcCall('GET', 'Sys.GetInfo', infoMessage ? infoMessage : false, false, function (resp) {
             var responseVal = 'Error'; // placeholder
@@ -39,7 +39,12 @@ var WiFiPortal = {
                 responseVal = "Unable to get info from device";
             }
 
-            document.getElementById("response").innerHTML = responseVal;
+            document.getElementById("response").innerHTML = responseVal ? responseVal : '';
+
+            // infoMessage is only sent when called by Test obj
+            if( ! infoMessage ){
+                WiFiPortal.Buttons.enableAll();
+            }
 
             // Need to check if function since this is called by event handler
             if ( typeof callback === "function" ) {
@@ -49,8 +54,57 @@ var WiFiPortal = {
     },
     Info: {},
     Error: {},
+    Buttons: {
+        _proto: function (elID, clickCB) {
+            var el = document.getElementById(elID);
+            if (el) {
+                el.addEventListener('click', clickCB);
+            }
+            return {
+                $el: el,
+                preVal: false,
+                update: function (msg) {
+                    this.$el.innerHTML = msg;
+                },
+                disable: function (msg) {
+                    // this.preVal is set to false after it's enabled, so only set if button is enabled
+                    if (!this.preVal) {
+                        this.preVal = this.$el.innerHTML;
+                    }
+                    this.update(msg);
+                    this.$el.disabled = true;
+                },
+                enable: function () {
+                    // Only set val back to preVal if there is one set
+                    if (this.preVal) {
+                        this.$el.innerHTML = this.preVal;
+                        this.preVal = false;
+                    }
+                    this.$el.disabled = false;
+                }
+            };
+        },
+        _all: {},
+        _ids: ["rescan", "save", "check"],
+        init: function () {
+            for (var i = 0; i < WiFiPortal.Buttons._ids.length; i++) {
+                var elID = WiFiPortal.Buttons._ids[i];
+                WiFiPortal.Buttons._all[elID] = new WiFiPortal.Buttons._proto(elID, WiFiPortal[elID]);
+            }
+        },
+        enableAll: function () {
+            for (var btn in WiFiPortal.Buttons._all) {
+                WiFiPortal.Buttons._all[btn].enable();
+            }
+        },
+        disableAll: function (msg) {
+            for (var btn in WiFiPortal.Buttons._all) {
+                WiFiPortal.Buttons._all[btn].disable(msg);
+            }
+        }
+    },
     Test: {
-        _timeout: 35,
+        _timeout: 30,
         _checks: 0,
         _interval: 5, // Interval (in seconds) to check wifi status
         success: false,
@@ -61,20 +115,22 @@ var WiFiPortal = {
             WiFiPortal.Test.success = false;
 
             // Initial Check after sending creds to device (if connect is succesful it's normally very quick)
-            setTimeout( WiFiPortal.Test.check, 2000 );
-            // Timeout callback
-            setTimeout(WiFiPortal.Test.timeout, ( WiFiPortal.Test._timeout * 1000 ) );
+            setTimeout( WiFiPortal.Test.check, 900 );
+            // Timeout callback ( add 2 second to timeout to pad for initial check above)
+            setTimeout(WiFiPortal.Test.timeout, ( WiFiPortal.Test._timeout * 1000 ) + 2000 );
         },
         timeout: function(){
             if( ! WiFiPortal.Test.success ){
                 WiFiPortal.Test.timedout = true;
+                WiFiPortal.Error.show('Test has timed out after ' + WiFiPortal.Test._timeout + ' seconds. Please check the SSID and Password and try again.');
+                // Re-enable all buttons after timeout
+                WiFiPortal.Buttons.enableAll();
                 WiFiPortal.Info.hide();
-                WiFiPortal.Error.show('Test has timed out after ' + WiFiPortal.Test._timeout + ' seconds, please check the credentials and try again.');
             }
         },
         check: function(){
-
-            WiFiPortal.getInfo( function(resp){
+            
+            WiFiPortal.check( function(resp){
                var errorMsg = 'Error'; // placeholder
 
                if (resp && resp !== true) {
@@ -91,6 +147,7 @@ var WiFiPortal = {
                                WiFiPortal.Test.success = true;
                                WiFiPortal.Error.hide();
                                WiFiPortal.Info.show('WiFi connection successful! Connected to ' + resp.wifi.ssid);
+                               WiFiPortal.Buttons.enableAll();
                            } else {
                                errorMsg = 'WiFi current status is ' + resp.wifi.status;
                            }
@@ -107,9 +164,9 @@ var WiFiPortal = {
 
                 WiFiPortal.Test._checks++;
 
-                if (!WiFiPortal.Test.success && !WiFiPortal.Test.timedout) {
-                    WiFiPortal.Info.hide();
-                    WiFiPortal.Error.show(errorMsg + ', check ' + WiFiPortal.Test._checks + ', trying again in ' + WiFiPortal.Test._interval + ' seconds...');
+                if ( ! WiFiPortal.Test.success && ! WiFiPortal.Test.timedout) {
+                    WiFiPortal.Error.hide();
+                    WiFiPortal.Info.show(errorMsg + ', check ' + WiFiPortal.Test._checks + ', trying again in ' + WiFiPortal.Test._interval + ' seconds...');
                     setTimeout(WiFiPortal.Test.check, (WiFiPortal.Test._interval * 1000));
                 }
 
@@ -126,21 +183,33 @@ var WiFiPortal = {
             return;
         }
 
+        WiFiPortal.Buttons.disableAll('Please wait, sending...');
+
         WiFiPortal.Test.ssid = ssid; // Set SSID value in test so we can verify connection is to that exact SSID
 
         WiFiPortal.rpcCall('POST', 'WiFi.PortalSave', 'Sending credentials to device to test...', { ssid: ssid, pass: password } , function( resp ){
             // True means we received a response, but no data
-            if( resp && resp !== true ){
-                WiFiPortal.Error.hide(); // Hide error when saving (to remove stale errors)
-                WiFiPortal.Info.show('Device is testing WiFi connection, please wait...');
-                WiFiPortal.Test.init();
+            if( resp && resp !== true && resp.result !== undefined ){
+
+                if( resp.result === false ){
+                    WiFiPortal.Error.show('Error from device setting up STA! Check SSID and Password and try again!');
+                    WiFiPortal.Buttons.enableAll();
+                } else {
+                    WiFiPortal.Error.hide(); // Hide error when saving (to remove stale errors)
+                    WiFiPortal.Info.show('Device is testing WiFi connection, please wait...');
+                    WiFiPortal.Test.init();
+                }
+
             } else {
                 WiFiPortal.Error.show('Error sending credentials to device, please try again');
+                WiFiPortal.Buttons.enableAll();
             }
 
         });
     },
     rescan: function () {
+
+        WiFiPortal.Buttons.disableAll('Scanning...');
 
         WiFiPortal.rpcCall('POST', 'Wifi.Scan', 'Scanning for WiFi networks in range of device...', false, function ( resp ) {
             
@@ -148,14 +217,18 @@ var WiFiPortal = {
 
                 var netSelect = document.getElementById("networks");
                 netSelect.removeAttribute("disabled"); // Remove disabled (on page load)
-                netSelect.innerHTML = '<option value="-1" disabled="disabled" selected="selected">Select WiFi Networks</option>'; // clear any existing ones
+                netSelect.innerHTML = '<option value="-1" disabled="disabled" selected="selected">Please select an SSID...</option>'; // clear any existing ones
+                var SSIDs = [];
 
                 resp.forEach(function (net) {
-                    // console.log( net );
+                    if( SSIDs.indexOf( net.ssid ) > -1 ){
+                        return; // prevent adding dupe SSIDs as all we send is the SSID to connect to
+                    }
                     var opt = document.createElement('option');
                     opt.innerHTML = net.ssid + " (" + net.bssid + ") - " + WiFiPortal.rssiToStrength(net.rssi) + "% / " + net.rssi;
                     opt.value = net.ssid;
                     netSelect.appendChild(opt);
+                    SSIDs.push(net.ssid);
                 });
 
                 WiFiPortal.Info.show("Please select from one of the " + resp.length + " WiFi networks found.");
@@ -164,6 +237,8 @@ var WiFiPortal = {
                 WiFiPortal.Info.hide();
                 WiFiPortal.Error.show('No networks found, try again...');
             }
+
+            WiFiPortal.Buttons.enableAll();
 
         });
 

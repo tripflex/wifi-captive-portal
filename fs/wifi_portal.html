@@ -7,7 +7,7 @@
 </head>
 <body>
     <div>
-        <form onsubmit="WiFiPortal.save();">
+        <div id="form">
             <div id="header">
                 Configure WiFi
             </div>
@@ -19,7 +19,7 @@
                 </label>
                 <select name="dropdown" id="networks" disabled="disabled" required="required">
                     <option value="-1" disabled="disabled" selected="selected">
-                        Scanning Networks...
+                        Waiting for networks...
                     </option> 
                 </select>
 
@@ -30,12 +30,12 @@
                 </label>
                 <input name="password" type="text" placeholder="password" id="password" autocomplete="off"/>
             </div>
-            <div id="save">
+            <button id="save" class="btn">
                 Save & Test
-            </div>
-            <a id="rescan">Rescan</a>
-            <a id="check">Check</a>
-        </form>
+            </button>
+            <button id="rescan" class="btn">Rescan</button>
+            <button id="check" class="btn">Check</button>
+        </div>
         <div style="margin-top: 20px; display: block;">
             <pre id="response">
                 
