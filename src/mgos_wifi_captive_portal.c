@@ -96,19 +96,18 @@ static void dns_ev_handler(struct mg_connection *c, int ev, void *ev_data,
 
 static void ip_aquired_cb(int ev, void *ev_data, void *userdata){
     char *connectedto = mgos_wifi_get_connected_ssid();
-    struct mgos_config_wifi_sta *sta = (struct mgos_config_wifi_sta *) userdata;
+    // struct mgos_config_wifi_sta *sta = (struct mgos_config_wifi_sta *) sp_test_sta_vals;
 
-    mgos_event_trigger(MGOS_WIFI_CAPTIVE_PORTAL_TEST_SUCCESS, sta);
+    mgos_event_trigger(MGOS_WIFI_CAPTIVE_PORTAL_TEST_SUCCESS, sp_test_sta_vals);
     LOG(LL_INFO, ("Wifi Captive Portal IP Aquired from SSID %s", connectedto ) );
     free(connectedto);
 
-    if ( sta != NULL && mgos_sys_config_get_portal_wifi_copy() )
-    {
-        LOG(LL_INFO, ("Copying SSID %s and Password %s to STA 1 config (wifi.sta)", sta->ssid, sta->pass ) );
+    if ( sp_test_sta_vals != NULL && mgos_sys_config_get_portal_wifi_copy() ){
+        LOG(LL_INFO, ("Copying SSID %s and Password %s to STA 1 config (wifi.sta)", sp_test_sta_vals->ssid, sp_test_sta_vals->pass ) );
 
         mgos_sys_config_set_wifi_sta_enable(true);
-        mgos_sys_config_set_wifi_sta_ssid(sta->ssid);
-        mgos_sys_config_set_wifi_sta_pass(sta->pass);
+        mgos_sys_config_set_wifi_sta_ssid(sp_test_sta_vals->ssid);
+        mgos_sys_config_set_wifi_sta_pass(sp_test_sta_vals->pass);
 
         int disable = mgos_sys_config_get_portal_wifi_disable();
         if ( disable == 1 || disable == 2 ){
@@ -186,10 +185,8 @@ static void root_handler(struct mg_connection *nc, int ev, void *p, void *user_d
         // Check if gzip file was requested
         struct mg_str uri = mg_mk_str_n(msg->uri.p, msg->uri.len);
         bool gzip = strncmp(uri.p + uri.len - 3, ".gz", 3) == 0;
-        // Check if URI is root directory
-        bool uriroot = strcmp( uri.p, "/" ) == 0;
-        
-        opts.index_files = "wifi_portal.html";
+        // Check if URI is root directory --  /wifi_portal.min.js.gz HTTP/1.1
+        bool uriroot = strncmp(uri.p, "/ HTTP", 6) == 0;
 
         // If gzip file requested (js/css) set Content-Encoding
         if (gzip){
@@ -198,18 +195,22 @@ static void root_handler(struct mg_connection *nc, int ev, void *p, void *user_d
         }
 
         if (uriroot){
-            LOG(LL_INFO, ("Root Handler -- Captive Portal Root Requested\n"));
+            LOG(LL_INFO, ("\nRoot Handler -- Captive Portal Root Requested\n"));
 
             if( s_serve_gzip ){
+                opts.index_files = "wifi_portal.min.html.gz";
                 LOG(LL_INFO, ("Root Handler -- Captive Portal Serving GZIP HTML \n"));
-                mg_http_serve_file(nc, msg, "wifi_portal.html.gz", mg_mk_str("text/html"), mg_mk_str("Content-Encoding: gzip"));
+                mg_http_serve_file(nc, msg, "wifi_portal.min.html.gz", mg_mk_str("text/html"), mg_mk_str("Content-Encoding: gzip"));
                 return;
             } else {
+                opts.index_files = "wifi_portal.html";
                 LOG(LL_INFO, ("Root Handler -- Captive Portal Serving HTML \n"));
                 mg_http_serve_file(nc, msg, "wifi_portal.html", mg_mk_str("text/html"), mg_mk_str("Access-Control-Allow-Origin: *"));
                 return;
             }
 
+        } else {
+            LOG(LL_DEBUG, ("\n Not URI Root, Actual: %s - %d\n", uri.p, uriroot));
         }
 
     } else {
