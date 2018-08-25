@@ -189,8 +189,6 @@ static void root_handler(struct mg_connection *nc, int ev, void *p, void *user_d
         // Check if URI is root directory
         bool uriroot = strcmp( uri.p, "/" ) == 0;
         
-        opts.index_files = "wifi_portal.html";
-
         // If gzip file requested (js/css) set Content-Encoding
         if (gzip){
             LOG(LL_INFO, ("Root Handler -- gzip Asset Requested -- Adding Content-Encoding Header \n"));
@@ -201,10 +199,12 @@ static void root_handler(struct mg_connection *nc, int ev, void *p, void *user_d
             LOG(LL_INFO, ("Root Handler -- Captive Portal Root Requested\n"));
 
             if( s_serve_gzip ){
+                opts.index_files = "wifi_portal.min.html.gz";
                 LOG(LL_INFO, ("Root Handler -- Captive Portal Serving GZIP HTML \n"));
-                mg_http_serve_file(nc, msg, "wifi_portal.html.gz", mg_mk_str("text/html"), mg_mk_str("Content-Encoding: gzip"));
+                mg_http_serve_file(nc, msg, "wifi_portal.min.html.gz", mg_mk_str("text/html"), mg_mk_str("Content-Encoding: gzip"));
                 return;
             } else {
+                opts.index_files = "wifi_portal.html";
                 LOG(LL_INFO, ("Root Handler -- Captive Portal Serving HTML \n"));
                 mg_http_serve_file(nc, msg, "wifi_portal.html", mg_mk_str("text/html"), mg_mk_str("Access-Control-Allow-Origin: *"));
                 return;

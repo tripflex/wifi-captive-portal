@@ -1,13 +1,6 @@
 # Mongoose OS Wifi Captive Portal
-
-- **This is the development branch (`dev` branch) which is to be used for development of the captive portal HTML/JS/CSS.**
-- The `dev` branch has a few differences from `master` branch:
-    - `portal.wifi.gzip` is set to `false` by default (`true` in master branch)
-    - `portal.wifi.enable` is set to `true` by default (`false` in master branch)
-    - There is no `portal_src` directory, as the regular `wifi_portal.html` `wifi_portal.css` and `wifi_portal.js` as located in the `fs` directory
-    - This also means there are no gzip files in the `dev` branch either (so do not enable `gzip` while using `dev` branch)
-
 - [Mongoose OS Wifi Captive Portal](#mongoose-os-wifi-captive-portal)
+    - [Author](#author)
     - [Features](#features)
     - [Settings](#settings)
         - [Setting Details](#setting-details)
@@ -26,11 +19,15 @@
         - [Response](#response)
     - [Events](#events)
     - [Other Remarks](#other-remarks)
+    - [Changelog](#changelog)
     - [License](#license)
 
 This library adds a captive portal to the wifi AP, when a client connects (desktop/mobile, etc), it will prompt the user to "Sign in to Network", and will display a webpage for the user to setup/configure wifi.
 
 ![OSX Captive Portal](https://raw.githubusercontent.com/tripflex/wifi-captive-portal/dev/osx-portal.gif)
+
+## Author
+Myles McNamara ( https://smyl.es )
 
 ## Features
 - Provides web UI for testing and configuring WiFi
@@ -47,16 +44,17 @@ This library adds a captive portal to the wifi AP, when a client connects (deskt
 - Reboot after sucesful SSID/Password test (after saving files)
 
 ## Settings
-Check the `mos.yml` file for latest settings, all settings listed below are defaults (**FOR THIS DEV BRANCH!**)
+Check the `mos.yml` file for latest settings, all settings listed below are defaults
 
 ```yaml
   - [ "portal.wifi.enable", "b", true, {title: "Enable WiFi captive portal on device boot"}]
   - [ "portal.wifi.rpc", "b", true, {title: "Enable Captive Portal RPC Endpoint regardless of whether captive portal is enabled/started"}]
-  - [ "portal.wifi.gzip", "b", false, {title: "Whether or not to serve gzip HTML file (set to false to serve standard HTML for dev)"}]
+  - [ "portal.wifi.gzip", "b", true, {title: "Whether or not to serve gzip HTML file (set to false to serve standard HTML for dev)"}]
   - [ "portal.wifi.hostname", "s", "setup.device.portal", {title: "Hostname to use for captive portal redirect"}]
   - [ "portal.wifi.copy", "b", true, {title: "Copy SSID and Password to wifi.sta after succesful test"}]
   - [ "portal.wifi.disable", "i", 2, {title: "0 - do nothing, 1 - Disable AP (wifi.ap.enable), 2 - Disable AP and Captive Portal (portal.wifi.enable) -- after successful test and copy/save values"}]
-  - [ "portal.wifi.reboot", "i", 0, {title: "0 to disable, or value (in seconds) to wait and then reboot device, after successful test (and copy/save values)"}]
+  - [ "portal.wifi.reboot", "i", 15, {title: "0 to disable, or value (in seconds) to wait and then reboot device, after successful test (and copy/save values)"}]
+
 ```
 
 ### Setting Details
@@ -75,10 +73,7 @@ As this branch is specifically for development of the lib, to use the dev branch
 
 ```yaml
   - origin: https://github.com/tripflex/wifi-captive-portal
-    version: dev
 ```
-
-**Note** the `version: dev` which specifies to use the `dev` branch from GitHub
 
 ## Required Libraries
 *These libraries are already defined as dependencies of this library, and is just here for reference (you're probably already using these anyways)*
@@ -157,6 +152,13 @@ If you wish to customize the html, JS, or CSS files for the portal, you can copy
 
 This disables serving the gzipped version of main portal HTML file `wifi_portal.html.gz` and instead will serve a `wifi_portal.html` file from your root filesystem on the device.
 
+You can also just use the `dev` branch in your project which has the unminified/ungzipped files in the `fs` directory already, see the dev branch for more details:
+
+```yaml
+  - origin: https://github.com/tripflex/wifi-captive-portal
+   version: dev
+```
+
 ## RPC Endpoints
 
 `WiFi.PortalSave` - `{ssid: YOURSSID, pass: PASSWORD }`
@@ -182,6 +184,10 @@ The RPC endpoint will be available even if you do not initalize/start the captiv
 ```yaml
 - [ "wifi.ap.enable", true ]
 ```
+
+## Changelog
+
+**1.0.0** (Aug 25, 2018) - Initial release
 
 ## License
 Apache 2.0
