@@ -69,7 +69,7 @@ Set this value to `0` to not disable anything, set to `1` to disable AP (set `wi
 - Device will reboot X seconds after succesful Wifi credential test, and saving values (if enabled)
 
 ## Installation/Usage
-As this branch is specifically for development of the lib, to use the dev branch you must add to your `mos.yml` file like this:
+Add this lib your `mos.yml` file under `libs:`
 
 ```yaml
   - origin: https://github.com/tripflex/wifi-captive-portal
