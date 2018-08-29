@@ -51,7 +51,7 @@ module.exports = function (grunt) {
         },
         clean: {
             source: ['portal_src/wifi_portal.html.tmp'],
-            min: ['portal_src/wifi_portal.min.css', 'portal_src/wifi_portal.min.js', 'portal_src/wifi_portal.html']
+            min: ['portal_src/wifi_portal.min.css', 'portal_src/wifi_portal.min.js', 'portal_src/wifi_portal.min.html']
         },
         htmlmin: {
             master: {

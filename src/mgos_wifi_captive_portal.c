@@ -161,6 +161,9 @@ static void maybe_reconnect(int ev, void *ev_data, void *userdata){
     s_connection_retries++;
     LOG(LL_INFO, ("Wifi Captive Portal - Retrying Connection... Attempt %d", s_connection_retries ) );
     mgos_wifi_connect();
+    (void)ev;
+    (void)ev_data;
+    (void)userdata;
 }
 
 static void remove_event_handlers(void){
