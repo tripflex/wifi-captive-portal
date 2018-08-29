@@ -1,4 +1,7 @@
 # Mongoose OS Wifi Captive Portal
+
+[![Gitter](https://badges.gitter.im/cesanta/mongoose-os.svg)](https://gitter.im/cesanta/mongoose-os?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 - [Mongoose OS Wifi Captive Portal](#mongoose-os-wifi-captive-portal)
     - [Author](#author)
     - [Features](#features)
