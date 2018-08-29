@@ -1,0 +1,21 @@
+{
+    "name": "wifi-captive-portal",
+    "title": "WiFi Captive Portal",
+    "version": "1.0.0",
+    "description": "Captive portal library for Mongoose OS to test, configure, and setup WiFi with RPC Endpoint and more!",
+    "author": {
+        "name": "Myles McNamara",
+        "url": "https://smyl.es"
+    },
+    "license": "Apache-2.0",
+    "devDependencies": {
+        "grunt": "^1.0.3",
+        "grunt-contrib-clean": "^1.1.0",
+        "grunt-contrib-compress": "^1.4.3",
+        "grunt-contrib-copy": "^1.0.0",
+        "grunt-contrib-cssmin": "^2.2.1",
+        "grunt-contrib-htmlmin": "^2.4.0",
+        "grunt-contrib-uglify": "^3.4.0",
+        "load-grunt-tasks": "^4.0.0"
+    }
+}
