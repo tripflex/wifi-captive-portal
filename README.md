@@ -1,5 +1,7 @@
 # Mongoose OS Wifi Captive Portal
 
+[![Gitter](https://badges.gitter.im/cesanta/mongoose-os.svg)](https://gitter.im/cesanta/mongoose-os?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 - **This is the development branch (`dev` branch) which is to be used for development of the captive portal HTML/JS/CSS.**
 - The `dev` branch has a few differences from `master` branch:
     - `portal.wifi.gzip` is set to `false` by default (`true` in master branch)
