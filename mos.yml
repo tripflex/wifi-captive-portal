@@ -8,7 +8,7 @@ sources:
   - src
 
 filesystem:
-  - portal_src
+  - fs
 
 includes:
   - include
