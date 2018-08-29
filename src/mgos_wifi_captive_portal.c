@@ -53,7 +53,6 @@ char *get_redirect_url(void){
 }
 
 static void redirect_ev_handler(struct mg_connection *nc, int ev, void *ev_data, void *user_data){
-    struct http_message *hm = (struct http_message *)ev_data;
 
     if (ev != MG_EV_HTTP_REQUEST)
         return;
@@ -62,6 +61,8 @@ static void redirect_ev_handler(struct mg_connection *nc, int ev, void *ev_data,
 
     LOG(LL_INFO, ("Redirecting to %s for Captive Portal", redirect_url ) );
     mg_http_send_redirect(nc, 302, mg_mk_str(redirect_url), mg_mk_str(NULL));
+
+    (void)ev_data;
     (void)user_data;
 }
 
@@ -132,6 +133,10 @@ static void ip_aquired_cb(int ev, void *ev_data, void *userdata){
     }
 
     remove_event_handlers();
+    
+    (void)ev;
+    (void)ev_data;
+    (void)userdata;
 }
 
 static void maybe_reconnect(int ev, void *ev_data, void *userdata){
