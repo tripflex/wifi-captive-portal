@@ -80,10 +80,20 @@ module.exports = function (grunt) {
             ymlfs: {
                 options: {
                     usePrefix: false,
-                    patterns: [{
-                        match: 'portal_src',
-                        replacement: 'fs'
-                    }]
+                    patterns: [
+                        {
+                            match: 'portal_src',
+                            replacement: 'fs'
+                        },
+                        {
+                            match: '"portal.wifi.gzip", "b", false',
+                            replace: '"portal.wifi.gzip", "b", true'
+                        },
+                        {
+                            match: '"portal.wifi.reboot", "i", 0',
+                            replace: '"portal.wifi.reboot", "i", 15'
+                        }
+                    ]
                 },
                 src: 'mos.yml',
                 dest: 'mos.yml'
