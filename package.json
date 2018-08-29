@@ -16,6 +16,7 @@
         "grunt-contrib-cssmin": "^2.2.1",
         "grunt-contrib-htmlmin": "^2.4.0",
         "grunt-contrib-uglify": "^3.4.0",
+        "grunt-replace": "^1.0.1",
         "load-grunt-tasks": "^4.0.0"
     }
 }

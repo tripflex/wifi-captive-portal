@@ -10,7 +10,7 @@ module.exports = function (grunt) {
         cssmin: {
             master: {
                 files: {
-                    'fs/wifi_portal.min.css': 'fs/wifi_portal.css'
+                    'portal_src/wifi_portal.min.css': 'portal_src/wifi_portal.css'
                 }
             }
         },
@@ -26,21 +26,21 @@ module.exports = function (grunt) {
                     },
                 },
                 files: {
-                    'fs/wifi_portal.min.js': 'fs/wifi_portal.js'
+                    'portal_src/wifi_portal.min.js': 'portal_src/wifi_portal.js'
                 }
             }
         },
         copy: {
             source: {
                 expand: true,
-                cwd: 'fs/',
+                cwd: 'portal_src/',
                 src: ['wifi_portal.html', 'wifi_portal.js', 'wifi_portal.css'],
                 dest: 'portal_src/',
                 flatten: true
             },
             html: {
-                src: ['fs/wifi_portal.html'],
-                dest: 'fs/wifi_portal.html.tmp',
+                src: ['portal_src/wifi_portal.html'],
+                dest: 'portal_src/wifi_portal.html.tmp',
                 options: {
                     process: function (content, srcpath) {
                         // Update CSS and JS files to gzip versions
@@ -50,8 +50,8 @@ module.exports = function (grunt) {
             }
         },
         clean: {
-            source: ['fs/wifi_portal.css', 'fs/wifi_portal.js', 'fs/wifi_portal.html', 'fs/wifi_portal.min.html', 'fs/wifi_portal.html.tmp'],
-            min: ['fs/wifi_portal.min.css', 'fs/wifi_portal.min.js', 'fs/wifi_portal.html']
+            source: ['portal_src/wifi_portal.html.tmp'],
+            min: ['portal_src/wifi_portal.min.css', 'portal_src/wifi_portal.min.js', 'portal_src/wifi_portal.html']
         },
         htmlmin: {
             master: {
@@ -60,7 +60,7 @@ module.exports = function (grunt) {
                     collapseWhitespace: true
                 },
                 files: {
-                    'fs/wifi_portal.min.html': 'fs/wifi_portal.html.tmp'
+                    'portal_src/wifi_portal.min.html': 'portal_src/wifi_portal.html.tmp'
                 }
             }
         },
@@ -70,17 +70,30 @@ module.exports = function (grunt) {
                     mode: 'gzip'
                 },
                 files: {
-                    'fs/wifi_portal.min.html.gz': 'fs/wifi_portal.min.html',
-                    'fs/wifi_portal.min.css.gz': 'fs/wifi_portal.min.css',
-                    'fs/wifi_portal.min.js.gz': 'fs/wifi_portal.min.js',
+                    'fs/wifi_portal.min.html.gz': 'portal_src/wifi_portal.min.html',
+                    'fs/wifi_portal.min.css.gz': 'portal_src/wifi_portal.min.css',
+                    'fs/wifi_portal.min.js.gz': 'portal_src/wifi_portal.min.js',
                 }
+            }
+        },
+        replace: {
+            ymlfs: {
+                options: {
+                    usePrefix: false,
+                    patterns: [{
+                        match: 'portal_src',
+                        replacement: 'fs'
+                    }]
+                },
+                src: 'mos.yml',
+                dest: 'mos.yml'
             }
         }
     });
 
     // Build for master branch
-    grunt.registerTask('master', ['copy:source', 'copy:html', 'htmlmin:master', 'cssmin:master', 'uglify:master', 'compress:gzip', 'clean:min', 'clean:source']);
-    grunt.registerTask('master-noclean', ['copy:source', 'copy:html', 'htmlmin:master', 'cssmin:master', 'uglify:master', 'compress:gzip']);
+    grunt.registerTask('master', ['copy:html', 'htmlmin:master', 'cssmin:master', 'uglify:master', 'compress:gzip', 'clean:min', 'clean:source', 'replace:ymlfs' ]);
+    grunt.registerTask('master-noclean', [ 'copy:html', 'htmlmin:master', 'cssmin:master', 'uglify:master', 'compress:gzip']);
 
     //grunt.util.linefeed = '\n';
 };

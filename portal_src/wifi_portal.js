@@ -1,4 +1,5 @@
 var WiFiPortal = {
+
     _msg_proto: function (elID) {
         return {
             $el: document.getElementById(elID),
@@ -54,6 +55,39 @@ var WiFiPortal = {
     },
     Info: {},
     Error: {},
+    Timers: {
+        clear: function(){
+            WiFiPortal.Timers.Test.remove();
+            WiFiPortal.Timers.Timeout.remove();
+        },
+        Timeout: {
+            _id: false,
+            init: function(){
+                WiFiPortal.Timers.Timeout.remove();
+                // Timeout callback ( add 2 second to timeout to pad for initial check)
+                WiFiPortal.Timers.Timeout._id = setTimeout(WiFiPortal.Test.timeout, (WiFiPortal.Test._timeout * 1000) + 2000);
+            },
+            remove: function(){
+                if( WiFiPortal.Timers.Timeout._id ){
+                    clearTimeout( WiFiPortal.Timers.Timeout._id );
+                    WiFiPortal.Timers.Timeout._id = false;
+                }
+            }
+        },
+        Test: {
+            _id: false,
+            init: function(){
+                WiFiPortal.Timers.Test.remove();
+                WiFiPortal.Timers.Test._id = setTimeout(WiFiPortal.Test.check, (WiFiPortal.Test._interval * 1000));
+            },
+            remove: function(){
+                if( WiFiPortal.Timers.Test._id ){
+                    clearTimeout( WiFiPortal.Timers.Test._id );
+                    WiFiPortal.Timers.Test._id = false;
+                }
+            }
+        }
+    },
     Buttons: {
         _proto: function (elID, clickCB) {
             var el = document.getElementById(elID);
@@ -112,24 +146,33 @@ var WiFiPortal = {
         ssid: false,
         init: function(){
             WiFiPortal.Test._checks = 0; // Reset number of checks to 0
-            WiFiPortal.Test.success = false;
-
+            WiFiPortal.Test.success = false; // Reset success
+            WiFiPortal.Test.timedout = false; // Reset timed out
             // Initial Check after sending creds to device (if connect is succesful it's normally very quick)
             setTimeout( WiFiPortal.Test.check, 900 );
-            // Timeout callback ( add 2 second to timeout to pad for initial check above)
-            setTimeout(WiFiPortal.Test.timeout, ( WiFiPortal.Test._timeout * 1000 ) + 2000 );
+            // Init timeout timer
+            WiFiPortal.Timers.Timeout.init();
         },
         timeout: function(){
+
             if( ! WiFiPortal.Test.success ){
                 WiFiPortal.Test.timedout = true;
                 WiFiPortal.Error.show('Test has timed out after ' + WiFiPortal.Test._timeout + ' seconds. Please check the SSID and Password and try again.');
-                // Re-enable all buttons after timeout
-                WiFiPortal.Buttons.enableAll();
                 WiFiPortal.Info.hide();
+                // Empty status box
+                var responseDiv = document.getElementById("response");
+                if( responseDiv ){
+                    responseDiv.innerHTML = '';
+                }
             }
+
+            // Clear all timers on timeout
+            WiFiPortal.Timers.clear();
+            // Re-enable all buttons after timeout
+            WiFiPortal.Buttons.enableAll();
         },
         check: function(){
-            
+
             WiFiPortal.check( function(resp){
                var errorMsg = 'Error'; // placeholder
 
@@ -148,6 +191,7 @@ var WiFiPortal = {
                                WiFiPortal.Error.hide();
                                WiFiPortal.Info.show('WiFi connection successful! Connected to ' + resp.wifi.ssid);
                                WiFiPortal.Buttons.enableAll();
+                               WiFiPortal.Timers.clear(); // Clear any timers after succesful connection
                            } else {
                                errorMsg = 'WiFi current status is ' + resp.wifi.status;
                            }
@@ -163,11 +207,11 @@ var WiFiPortal = {
                }
 
                 WiFiPortal.Test._checks++;
-
-                if ( ! WiFiPortal.Test.success && ! WiFiPortal.Test.timedout) {
+                // Only reschedule next check timer if test was not a success and test has not timed out yet
+                if ( ! WiFiPortal.Test.success && ! WiFiPortal.Test.timedout ) {
                     WiFiPortal.Error.hide();
                     WiFiPortal.Info.show(errorMsg + ', check ' + WiFiPortal.Test._checks + ', trying again in ' + WiFiPortal.Test._interval + ' seconds...');
-                    setTimeout(WiFiPortal.Test.check, (WiFiPortal.Test._interval * 1000));
+                    WiFiPortal.Timers.Test.init();
                 }
 
             }, 'Checking device WiFi status...' );
