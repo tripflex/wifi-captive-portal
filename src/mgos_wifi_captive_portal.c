@@ -36,6 +36,7 @@ static char *s_test_pass = NULL;
 
 static int s_serve_gzip;
 static int s_connection_retries = 0;
+static mgos_timer_id s_connect_timer_id = MGOS_INVALID_TIMER_ID;
 static int s_captive_portal_init = 0;
 static int s_captive_portal_rpc_init = 0;
 
@@ -44,6 +45,20 @@ static struct mgos_config_wifi_sta *sp_test_sta_vals = NULL;
 
 static void remove_event_handlers(void);
 static void add_event_handlers(void);
+
+static void clear_timeout_vals(void){
+    mgos_clear_timer(s_connect_timer_id);
+    s_connect_timer_id = MGOS_INVALID_TIMER_ID;
+    remove_event_handlers();
+    mgos_event_trigger(MGOS_WIFI_CAPTIVE_PORTAL_TEST_FAILED, sp_test_sta_vals);
+    s_connection_retries = 0;
+}
+
+static void sta_connect_timeout_timer_cb(void *arg) {
+  clear_timeout_vals();
+  LOG(LL_ERROR, ("Captive Portal WiFi STA: Connect timeout"));
+  (void) arg;
+}
 
 char *get_redirect_url(void){
     static char redirect_url[256];
@@ -103,6 +118,9 @@ static void ip_aquired_cb(int ev, void *ev_data, void *userdata){
     LOG(LL_INFO, ("Wifi Captive Portal IP Aquired from SSID %s", connectedto ) );
     free(connectedto);
 
+    // Clear timeout timer on IP Aquired
+    clear_timeout_vals();
+
     if ( sp_test_sta_vals != NULL && mgos_sys_config_get_portal_wifi_copy() ){
         LOG(LL_INFO, ("Copying SSID %s and Password %s to STA 1 config (wifi.sta)", sp_test_sta_vals->ssid, sp_test_sta_vals->pass ) );
 
@@ -133,7 +151,7 @@ static void ip_aquired_cb(int ev, void *ev_data, void *userdata){
     }
 
     remove_event_handlers();
-    
+
     (void)ev;
     (void)ev_data;
     (void)userdata;
@@ -142,14 +160,7 @@ static void ip_aquired_cb(int ev, void *ev_data, void *userdata){
 static void maybe_reconnect(int ev, void *ev_data, void *userdata){
     s_connection_retries++;
     LOG(LL_INFO, ("Wifi Captive Portal - Retrying Connection... Attempt %d", s_connection_retries ) );
-    // Soooo ... if we call Sys.GetInfo before attempting to make test connection to STA
-    // we will constantly get a DISCONNECTED and it will never connect ... not sure why or what to do about it
     mgos_wifi_connect();
-
-    if (s_connection_retries > 15){
-        remove_event_handlers();
-        mgos_event_trigger(MGOS_WIFI_CAPTIVE_PORTAL_TEST_FAILED, sp_test_sta_vals);
-    }
 }
 
 static void remove_event_handlers(void){
@@ -263,6 +274,10 @@ static void mgos_wifi_captive_portal_save_rpc_handler(struct mg_rpc_request_info
 
     // Make sure to remove any existing handlers (in case of previous RPC call)
     remove_event_handlers();
+
+    if ( s_connect_timer_id == MGOS_INVALID_TIMER_ID ){
+        s_connect_timer_id = mgos_set_timer(30000, 0, sta_connect_timeout_timer_cb, NULL);
+    }
 
     LOG(LL_INFO, ("WiFi.PortalSave RPC Handler ssid: %s pass: %s", s_test_ssid, s_test_pass));
 
