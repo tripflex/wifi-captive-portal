@@ -28,6 +28,10 @@
 
 #include "mongoose.h"
 
+#if CS_PLATFORM == CS_P_ESP8266
+#include "user_interface.h"
+#endif
+
 static const char *s_ap_ip = "192.168.4.1";
 static const char *s_portal_hostname = "setup.device.local";
 static const char *s_listening_addr = "udp://:53";
@@ -314,6 +318,10 @@ bool mgos_wifi_captive_portal_start(void){
 
     LOG(LL_INFO, ("Starting WiFi Captive Portal..."));
 
+#if CS_PLATFORM == CS_P_ESP8266
+    int on = 1;
+    wifi_softap_set_dhcps_offer_option(OFFER_ROUTER, &on);
+#endif
     /*
      *    TODO:
      *    Maybe need to figure out way to handle DNS for captive portal, if user has defined AP hostname,
