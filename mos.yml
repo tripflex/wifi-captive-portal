@@ -19,7 +19,7 @@ config_schema:
   - [ "portal.wifi.enable", "b", true, {title: "Enable WiFi captive portal on device boot"}]
   - [ "portal.wifi.rpc", "b", true, {title: "Enable Captive Portal RPC Endpoint regardless of whether captive portal is enabled/started"}]
   - [ "portal.wifi.gzip", "b", true, {title: "Whether or not to serve gzip HTML file (set to false to serve standard HTML for dev)"}]
-  - [ "portal.wifi.hostname", "s", "setup.device.portal", {title: "Hostname to use for captive portal redirect"}]
+  - [ "portal.wifi.hostname", "s", "setup.device.local", {title: "Hostname to use for captive portal redirect"}]
   - [ "portal.wifi.copy", "b", true, {title: "Copy SSID and Password to wifi.sta after succesful test"}]
   - [ "portal.wifi.disable", "i", 2, {title: "0 - do nothing, 1 - Disable AP (wifi.ap.enable), 2 - Disable AP and Captive Portal (portal.wifi.enable) -- after successful test and copy/save values"}]
   - [ "portal.wifi.reboot", "i", 15, {title: "0 to disable, or value (in seconds) to wait and then reboot device, after successful test (and copy/save values)"}]

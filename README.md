@@ -3,27 +3,27 @@
 [![Gitter](https://badges.gitter.im/cesanta/mongoose-os.svg)](https://gitter.im/cesanta/mongoose-os?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 - [Mongoose OS Wifi Captive Portal](#mongoose-os-wifi-captive-portal)
-    - [Author](#author)
-    - [Features](#features)
-    - [Settings](#settings)
-        - [Setting Details](#setting-details)
-            - [Reboot Setting `portal.wifi.reboot`](#reboot-setting-portalwifireboot)
-    - [Installation/Usage](#installationusage)
-    - [Required Libraries](#required-libraries)
-    - [How it works](#how-it-works)
-            - [Known Endpoints](#known-endpoints)
-    - [Ideal Flow](#ideal-flow)
-    - [Directories and Files](#directories-and-files)
-    - [Available Functions/Methods](#available-functionsmethods)
-        - [C Functions](#c-functions)
-        - [MJS](#mjs)
-    - [Dev for HTML/CSS/JS](#dev-for-htmlcssjs)
-    - [RPC Endpoints](#rpc-endpoints)
-        - [Response](#response)
-    - [Events](#events)
-    - [Other Remarks](#other-remarks)
-    - [Changelog](#changelog)
-    - [License](#license)
+  - [Author](#author)
+  - [Features](#features)
+  - [Settings](#settings)
+    - [Setting Details](#setting-details)
+      - [Reboot Setting `portal.wifi.reboot`](#reboot-setting-portalwifireboot)
+  - [Installation/Usage](#installationusage)
+  - [Required Libraries](#required-libraries)
+  - [How it works](#how-it-works)
+      - [Known Endpoints](#known-endpoints)
+  - [Ideal Flow](#ideal-flow)
+  - [Directories and Files](#directories-and-files)
+  - [Available Functions/Methods](#available-functionsmethods)
+    - [C Functions](#c-functions)
+    - [MJS](#mjs)
+  - [Dev for HTML/CSS/JS](#dev-for-htmlcssjs)
+  - [RPC Endpoints](#rpc-endpoints)
+    - [Response](#response)
+  - [Events](#events)
+  - [Other Remarks](#other-remarks)
+  - [Changelog](#changelog)
+  - [License](#license)
 
 This library adds a captive portal to the wifi AP, when a client connects (desktop/mobile, etc), it will prompt the user to "Sign in to Network", and will display a webpage for the user to setup/configure wifi.
 
@@ -53,7 +53,7 @@ Check the `mos.yml` file for latest settings, all settings listed below are defa
   - [ "portal.wifi.enable", "b", true, {title: "Enable WiFi captive portal on device boot"}]
   - [ "portal.wifi.rpc", "b", true, {title: "Enable Captive Portal RPC Endpoint regardless of whether captive portal is enabled/started"}]
   - [ "portal.wifi.gzip", "b", true, {title: "Whether or not to serve gzip HTML file (set to false to serve standard HTML for dev)"}]
-  - [ "portal.wifi.hostname", "s", "setup.device.portal", {title: "Hostname to use for captive portal redirect"}]
+  - [ "portal.wifi.hostname", "s", "setup.device.local", {title: "Hostname to use for captive portal redirect"}]
   - [ "portal.wifi.copy", "b", true, {title: "Copy SSID and Password to wifi.sta after succesful test"}]
   - [ "portal.wifi.disable", "i", 2, {title: "0 - do nothing, 1 - Disable AP (wifi.ap.enable), 2 - Disable AP and Captive Portal (portal.wifi.enable) -- after successful test and copy/save values"}]
   - [ "portal.wifi.reboot", "i", 15, {title: "0 to disable, or value (in seconds) to wait and then reboot device, after successful test (and copy/save values)"}]
@@ -189,6 +189,10 @@ The RPC endpoint will be available even if you do not initalize/start the captiv
 ```
 
 ## Changelog
+
+**1.1.0** (TBD)
+- Changed default hostname from `setup.device.portal` to `setup.device.local`
+- 
 
 **1.0.0** (Aug 25, 2018) - Initial release
 
