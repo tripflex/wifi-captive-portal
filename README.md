@@ -1,4 +1,13 @@
-# Mongoose OS Wifi Captive Portal
+# Mongoose OS Wifi Captive Portal (DEPRECATED!)
+
+**Please use the new library** -- this library will no longer be updated, and is not in READONLY mode!  Plus the new library has all kinds of new features and enhancements!
+https://github.com/tripflex/captive-portal-wifi-stack
+
+IS a combination of all of these libs:
+https://github.com/tripflex/captive-portal
+https://github.com/tripflex/captive-portal-wifi-setup
+https://github.com/tripflex/captive-portal-wifi-rpc
+https://github.com/tripflex/captive-portal-wifi-web
 
 [![Gitter](https://badges.gitter.im/cesanta/mongoose-os.svg)](https://gitter.im/cesanta/mongoose-os?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
